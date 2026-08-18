@@ -87,15 +87,39 @@ func _build_player_and_bases() -> PlayerState:
 		node.position = pos
 		add_child(node)
 
-	# 朔国基地（占位，M1-2 补战斗）
+	# 朔国基地：大寨 + 焰阵 + 篝帐 + 灵脉矿（AI 接管运营）
+	var player1 := PlayerState.new()
+	player1.setup(1)
+	player1.crystals = 300  # 补偿无微操
+	add_child(player1)
+
 	var ehq := Building.new()
 	ehq.setup("dazhai", 1, true)
 	ehq.position = Vector2(1100, -450)
 	add_child(ehq)
 
+	var ebar := Building.new()
+	ebar.setup("yanzhen", 1, true)
+	ebar.position = Vector2(1260, -430)
+	add_child(ebar)
+
+	var etent := Building.new()
+	etent.setup("gaizhang", 1, true)
+	etent.position = Vector2(1030, -540)
+	add_child(etent)
+
 	var enode := CrystalNode.new()
-	enode.position = Vector2(1350, -150)
+	enode.position = Vector2(1380, -180)
 	add_child(enode)
+
+	# AI 与胜负
+	var ai := EnemyAI.new()
+	ai.setup(1, self)
+	add_child(ai)
+
+	var victory := VictoryManager.new()
+	victory.setup(self)
+	add_child(victory)
 	return player
 
 
@@ -105,7 +129,12 @@ func _build_units() -> void:
 		w.team = 0
 		w.position = Vector2(-1020 + float(i) * 55.0, 500 + float(i) * 30.0)
 		add_child(w)
-	# 朔国驻防小队：3游侠 + 2冰凌射手 + 1潮灵（M1 冲刺三补 AI，当前站桩仇恨）
+	# 朔国 AI 民夫（AI 会派去采矿并补足到 5）
+	for i in 3:
+		var w1 := Defs.spawn("yanmin", 1)
+		w1.position = Vector2(1150 + float(i) * 50.0, -370)
+		add_child(w1)
+	# 朔国驻防小队：3游侠 + 2冰凌射手 + 1潮灵
 	var squad := [
 		["youxia", Vector2(980, -350)], ["youxia", Vector2(1040, -300)], ["youxia", Vector2(920, -300)],
 		["binglingshou", Vector2(1080, -400)], ["binglingshou", Vector2(1000, -430)],
