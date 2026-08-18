@@ -8,6 +8,7 @@ const FORMATION_SPACING := 34.0
 var camera: Camera2D
 var hud: BasicHUD
 var selected: Array[Unit] = []
+var selected_building: Building = null
 
 var _dragging := false
 var _drag_start := Vector2.ZERO
@@ -33,7 +34,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				else:
 					_rect_select(rect, event.shift_pressed)
 		elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-			_issue_move(event.position)
+			_issue_smart_command(event.position)
 
 
 func _process(_delta: float) -> void:
@@ -63,16 +64,39 @@ func _point_select(screen_pos: Vector2, shift: bool) -> void:
 		if d < best_dist:
 			best_dist = d
 			best = u
+	if best == null:
+		# 单位没点到 → 尝试己方建筑
+		var b := _building_at(wp)
+		if not shift:
+			_clear_selection()
+		if b != null:
+			_select_building(b)
+		return
 	if not shift:
 		_clear_selection()
-	if best == null:
-		return
 	if shift and best.selected:
 		best.set_selected(false)
 		selected.erase(best)
 	elif not best.selected:
 		best.set_selected(true)
 		selected.append(best)
+
+
+func _building_at(wp: Vector2) -> Building:
+	for b in get_tree().get_nodes_in_group("buildings"):
+		if b is Building and b.team == 0:
+			var size: Vector2 = Defs.building(b.def_id)["size"] * 0.5
+			if Rect2(b.global_position - size, size * 2.0).has_point(wp):
+				return b
+	return null
+
+
+func _select_building(b: Building) -> void:
+	if selected_building == b:
+		return
+	_deselect_building()
+	selected_building = b
+	b.set_selected(true)
 
 
 func _rect_select(screen_rect: Rect2, shift: bool) -> void:
@@ -87,6 +111,46 @@ func _rect_select(screen_rect: Rect2, shift: bool) -> void:
 			selected.append(u)
 
 
+func _issue_smart_command(screen_pos: Vector2) -> void:
+	var wp := _world_from_screen(screen_pos)
+	# 智能指令：矿脉 → 采集；未完工工地 → 施工；否则 → 移动
+	var node := _gather_node_at(wp)
+	var site := _construction_site_at(wp)
+	if node != null:
+		var any := false
+		for u in selected:
+			if u is Worker:
+				(u as Worker).command_gather(node)
+				any = true
+		if any:
+			return
+	if site != null:
+		var any_b := false
+		for u in selected:
+			if u is Worker:
+				(u as Worker).command_build(site)
+				any_b = true
+		if any_b:
+			return
+	_issue_move(screen_pos)
+
+
+func _gather_node_at(wp: Vector2) -> CrystalNode:
+	for n in get_tree().get_nodes_in_group("gather_nodes"):
+		if n is CrystalNode and not n.is_depleted() and n.global_position.distance_to(wp) <= 42.0:
+			return n
+	return null
+
+
+func _construction_site_at(wp: Vector2) -> Building:
+	for b in get_tree().get_nodes_in_group("buildings"):
+		if b is Building and b.team == 0 and not b.complete:
+			var size: Vector2 = Defs.building(b.def_id)["size"] * 0.5
+			if Rect2(b.global_position - size, size * 2.0).has_point(wp):
+				return b
+	return null
+
+
 func _issue_move(screen_pos: Vector2) -> void:
 	if selected.is_empty():
 		return
@@ -99,7 +163,14 @@ func _issue_move(screen_pos: Vector2) -> void:
 		selected[i].command_move_to(target + off)
 
 
+func _deselect_building() -> void:
+	if selected_building != null:
+		selected_building.set_selected(false)
+		selected_building = null
+
+
 func _clear_selection() -> void:
 	for u in selected:
 		u.set_selected(false)
 	selected.clear()
+	_deselect_building()

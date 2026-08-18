@@ -4,8 +4,11 @@ extends CharacterBody2D
 
 @export var team := 0
 @export var move_speed := 170.0
+@export var pop := 1
 
 var selected := false
+var enable_stuck_heal := true  # Worker 等自带状态机的单位关闭
+var pop_reserved := false  # 生产队列已预占人口时为真，避免重复计数
 
 var _agent: NavigationAgent2D
 var _sprite: Sprite2D
@@ -36,6 +39,9 @@ func _ready() -> void:
 	_agent.max_speed = move_speed * 1.25  # RVO 避让的速度上限，默认 100 会拖慢行军
 	add_child(_agent)
 	_agent.velocity_computed.connect(_on_velocity_computed)
+	var player := PlayerState.for_team(self, team)
+	if player and not pop_reserved:
+		player.register_unit(pop)
 
 
 func command_move_to(world_pos: Vector2) -> void:
@@ -64,6 +70,8 @@ func _physics_process(_delta: float) -> void:
 
 func _detect_stuck() -> void:
 	"""卡死自愈：未到达却原地不动超过 1 秒，重新下发目标强制重寻路。"""
+	if not enable_stuck_heal:
+		return
 	if global_position.distance_to(_last_pos) < 0.5:
 		_stuck_frames += 1
 		if _stuck_frames > 60:

@@ -4,6 +4,7 @@ extends CanvasLayer
 
 var sel_mgr: SelectionManager
 var cam: Camera2D
+@export var tips_text := "M0 骨架验证：左键点选/框选（Shift 加选） · 右键移动 · WASD/屏幕边缘平移 · 滚轮缩放 · 小地图点击跳转"
 
 var _status: Label
 var _rect: SelectionRectControl
@@ -15,7 +16,7 @@ func _init() -> void:
 
 func _ready() -> void:
 	var tips := Label.new()
-	tips.text = "M0 骨架验证：左键点选/框选（Shift 加选） · 右键移动 · WASD/屏幕边缘平移 · 滚轮缩放 · 小地图点击跳转"
+	tips.text = tips_text
 	tips.position = Vector2(16, 10)
 	add_child(tips)
 
