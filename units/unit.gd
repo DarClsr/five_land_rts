@@ -1,31 +1,57 @@
 class_name Unit
 extends CharacterBody2D
-"""M0 占位单位：NavigationAgent2D 寻路 + 避让，像素小人 + 墨渍影 + 选中环。"""
+"""单位基类：寻路移动 + 战斗核心（攻击/追击/自仇恨/灼烧/减速/隐身/光环）。"""
 
 @export var team := 0
-@export var move_speed := 170.0
 @export var pop := 1
+@export var element := "凡"
+@export var max_hp := 60.0
+@export var base_speed := 170.0
+@export var dmg := 0.0
+@export var attack_range := 0.0      # 0 = 无战斗力
+@export var attack_cd := 1.0
+@export var ranged := false
+@export var applies_slow := false   # 冰凌射手：命中减速
+@export var can_stealth := false     # 游侠：潜流形态
+@export var has_aura := false        # 潮灵：涨潮光环
+@export var is_worker := false
 
+var hp := 0.0
+var alive := true
 var selected := false
 var enable_stuck_heal := true  # Worker 等自带状态机的单位关闭
-var pop_reserved := false  # 生产队列已预占人口时为真，避免重复计数
+var pop_reserved := false
+
+var attack_target: Node2D = null     # Unit 或 Building（duck-typing）
+
+var burn_time := 0.0
+var no_burn_until := 0
+var slow_time := 0.0
+var stealthed := false
+var aura_mult := 1.0
 
 var _agent: NavigationAgent2D
 var _sprite: Sprite2D
+var _move_target := Vector2.INF
 var _last_pos := Vector2.INF
 var _stuck_frames := 0
-var _move_target := Vector2.INF
+var _attack_timer := 0.0
+var _scan_timer := 0.0
+var _aura_timer := 0.0
+const AGGRO_RANGE := 240.0
+const AURA_RADIUS := 130.0
 
 static var _tex_cache := {}
 
 
 func _ready() -> void:
 	add_to_group("units")
+	hp = max_hp
 	_sprite = Sprite2D.new()
-	var tex: ImageTexture = _tex_cache.get(team)
+	var tex: ImageTexture = _tex_cache.get(element)
 	if tex == null:
-		tex = PixelFigure.make_texture(_team_accent())
-		_tex_cache[team] = tex
+		tex = PixelFigure.make_texture(Elements.element_color(element))
+		_tex_cache[element] = tex
 	_sprite.texture = tex
 	_sprite.position = Vector2(0, -16)
 	add_child(_sprite)
@@ -36,7 +62,7 @@ func _ready() -> void:
 	_agent.path_postprocessing = 1  # PathPostProcessing.EDGE_CENTERED，边中点路径，远离墙角
 	_agent.avoidance_enabled = true
 	_agent.radius = 12.0
-	_agent.max_speed = move_speed * 1.25  # RVO 避让的速度上限，默认 100 会拖慢行军
+	_agent.max_speed = base_speed * 1.25 * 2.0  # RVO 上限给光环加速留余量
 	add_child(_agent)
 	_agent.velocity_computed.connect(_on_velocity_computed)
 	var player := PlayerState.for_team(self, team)
@@ -44,10 +70,201 @@ func _ready() -> void:
 		player.register_unit(pop)
 
 
+# ---- 指令 ----
+
 func command_move_to(world_pos: Vector2) -> void:
+	attack_target = null
 	_move_target = world_pos
 	_agent.target_position = world_pos
 
+
+func command_attack(t: Node2D) -> void:
+	if is_worker or attack_range <= 0.0:
+		return
+	attack_target = t
+
+
+func toggle_stealth() -> void:
+	if not can_stealth:
+		return
+	stealthed = not stealthed
+	if stealthed:
+		attack_target = null
+
+
+# ---- 主循环 ----
+
+func _physics_process(delta: float) -> void:
+	if not alive:
+		return
+	_update_status(delta)
+	var attacking_in_place := _combat_tick(delta)
+	if attacking_in_place:
+		velocity = Vector2.ZERO
+		return
+	if _agent.is_navigation_finished():
+		velocity = Vector2.ZERO
+		return
+	var next := _agent.get_next_path_position()
+	var desired := (next - global_position).normalized() * base_speed * _speed_mult()
+	_agent.set_velocity(desired)  # 由避让回调 _on_velocity_computed 落地
+	_detect_stuck()
+
+
+func _speed_mult() -> float:
+	var m := 1.0
+	if stealthed:
+		m *= 0.5
+	if slow_time > 0.0:
+		m *= Elements.SLOW_FACTOR
+	m *= aura_mult
+	return m
+
+
+func _update_status(delta: float) -> void:
+	if burn_time > 0.0:
+		burn_time -= delta
+		hp -= Elements.BURN_DPS * delta
+		if hp <= 0.0:
+			_die(null)
+			return
+	slow_time = maxf(0.0, slow_time - delta)
+	_aura_timer -= delta
+	if _aura_timer <= 0.0:
+		_aura_timer = 0.6
+		aura_mult = 1.2 if _near_ally_tide_spirit() else 1.0
+	# 视觉：灼烧泛红 / 潜流半透明
+	if _sprite != null:
+		_sprite.modulate = Color(1.0, 0.7, 0.65) if burn_time > 0.0 else Color.WHITE
+		_sprite.modulate.a = 0.35 if stealthed else 1.0
+
+
+func _near_ally_tide_spirit() -> bool:
+	for u in get_tree().get_nodes_in_group("units"):
+		if u is Unit and u.alive and u.team == team and u.has_aura:
+			if global_position.distance_to(u.global_position) <= AURA_RADIUS:
+				return true
+	return false
+
+
+# ---- 战斗 ----
+
+func _combat_tick(delta: float) -> bool:
+	if is_worker or stealthed or attack_range <= 0.0:
+		return false
+	# 校验目标
+	if attack_target != null and (not is_instance_valid(attack_target) or not _target_ok(attack_target)):
+		attack_target = null
+	# 自仇恨：闲时每 0.5s 扫最近敌人
+	if attack_target == null:
+		_scan_timer -= delta
+		if _scan_timer <= 0.0:
+			_scan_timer = 0.5
+			attack_target = _find_enemy()
+		if attack_target == null:
+			return false
+	var dist := global_position.distance_to(attack_target.global_position)
+	var reach := attack_range + _target_radius()
+	if dist <= reach:
+		_agent.target_position = global_position  # 站定
+		_attack_timer -= delta
+		if _attack_timer <= 0.0:
+			_attack_timer = attack_cd
+			_fire(attack_target)
+		if _sprite != null and attack_target is Node2D:
+			_sprite.flip_h = attack_target.global_position.x < global_position.x
+		return true
+	# 追击
+	_agent.target_position = attack_target.global_position
+	return false
+
+
+func _target_ok(t: Node2D) -> bool:
+	if t is Unit:
+		return (t as Unit).alive and (t as Unit).team != team
+	if t is Building:
+		return (t as Building).alive and (t as Building).team != team
+	return false
+
+
+func _target_radius() -> float:
+	if attack_target is Building:
+		var s: Vector2 = Defs.building((attack_target as Building).def_id)["size"]
+		return maxf(s.x, s.y) * 0.5
+	return 14.0
+
+
+func _find_enemy() -> Node2D:
+	var best: Node2D = null
+	var best_d := AGGRO_RANGE
+	for u in get_tree().get_nodes_in_group("units"):
+		if u is Unit and u.alive and u.team != team and not u.stealthed:
+			var d: float = global_position.distance_to(u.global_position) - 14.0
+			if d < best_d:
+				best_d = d
+				best = u
+	if best != null:
+		return best
+	for b in get_tree().get_nodes_in_group("buildings"):
+		if b is Building and b.alive and b.team != team:
+			var s: Vector2 = Defs.building(b.def_id)["size"]
+			var d: float = global_position.distance_to(b.global_position) - maxf(s.x, s.y) * 0.5
+			if d < best_d:
+				best_d = d
+				best = b
+	return best
+
+
+func _fire(t: Node2D) -> void:
+	if ranged:
+		var p := Projectile.new()
+		p.setup(self, t, dmg)
+		get_parent().add_child(p)
+		p.position = global_position + Vector2(0, -20)
+	else:
+		t.take_damage(dmg, self)
+
+
+func take_damage(amount: float, attacker: Node2D) -> void:
+	if not alive:
+		return
+	var att_elem := "凡"
+	if attacker != null and is_instance_valid(attacker) and attacker.get("element") != null:
+		att_elem = str(attacker.element)
+	hp -= amount * Elements.multiplier(att_elem, element)
+	# 「熄」：水克火，浇灭灼烧并短暂免疫
+	if att_elem == "水" and element == "火":
+		burn_time = 0.0
+		no_burn_until = Time.get_ticks_msec() + Elements.QUENCH_TIME_MS
+	# 灼烧：火系攻击附带
+	elif att_elem == "火" and element != "凡" and Time.get_ticks_msec() > no_burn_until:
+		burn_time = Elements.BURN_TIME
+	# 冰凌：命中减速
+	if attacker != null and is_instance_valid(attacker) and bool(attacker.get("applies_slow")):
+		slow_time = Elements.SLOW_TIME
+	queue_redraw()
+	# 被打反击
+	if not is_worker and attack_range > 0.0 and attack_target == null:
+		if attacker != null and is_instance_valid(attacker) and attacker is Node2D and _target_ok(attacker):
+			attack_target = attacker
+	if hp <= 0.0:
+		_die(attacker)
+
+
+func _die(_killer: Node2D) -> void:
+	if not alive:
+		return
+	alive = false
+	var s := InkSplat.new()
+	s.position = global_position
+	get_parent().add_child(s)
+	var player := PlayerState.for_team(self, team)
+	if player:
+		player.unregister_unit(pop)
+	queue_free()
+
+
+# ---- 诊断 ----
 
 func is_nav_finished_diag() -> bool:
 	return _agent.is_navigation_finished()
@@ -57,15 +274,13 @@ func diag_next_path_pos() -> Vector2:
 	return _agent.get_next_path_position()
 
 
-func _physics_process(_delta: float) -> void:
-	if _agent.is_navigation_finished():
-		velocity = Vector2.ZERO
-		_stuck_frames = 0
-		return
-	var next := _agent.get_next_path_position()
-	var desired := (next - global_position).normalized() * move_speed
-	_agent.set_velocity(desired)  # 由避让回调 _on_velocity_computed 落地
-	_detect_stuck()
+# ---- 移动落地 ----
+
+func _on_velocity_computed(safe_velocity: Vector2) -> void:
+	velocity = safe_velocity
+	if absf(safe_velocity.x) > 1.0:
+		_sprite.flip_h = safe_velocity.x < 0.0
+	move_and_slide()
 
 
 func _detect_stuck() -> void:
@@ -83,12 +298,7 @@ func _detect_stuck() -> void:
 	_last_pos = global_position
 
 
-func _on_velocity_computed(safe_velocity: Vector2) -> void:
-	velocity = safe_velocity
-	if absf(safe_velocity.x) > 1.0:
-		_sprite.flip_h = safe_velocity.x < 0.0
-	move_and_slide()
-
+# ---- 视觉 ----
 
 func set_selected(v: bool) -> void:
 	selected = v
@@ -103,7 +313,9 @@ func _draw() -> void:
 	if selected:
 		var ring := Color(0.78, 0.23, 0.17) if team == 0 else Color(0.12, 0.12, 0.12)
 		draw_arc(Vector2(0, 3), 15.0, 0.0, TAU, 40, ring, 1.6)
-
-
-func _team_accent() -> Color:
-	return Color(0.72, 0.18, 0.14) if team == 0 else Color(0.30, 0.34, 0.42)
+	# 血条（受损时显示）
+	if hp < max_hp - 0.5:
+		var w := 26.0
+		draw_rect(Rect2(Vector2(-w * 0.5, -36), Vector2(w, 3)), Color(0.15, 0.14, 0.13, 0.7))
+		draw_rect(Rect2(Vector2(-w * 0.5, -36), Vector2(w * clampf(hp / max_hp, 0.0, 1.0), 3)),
+			Color(0.78, 0.23, 0.17) if team == 0 else Color(0.25, 0.30, 0.40))

@@ -105,16 +105,21 @@ func _build_units() -> void:
 		w.team = 0
 		w.position = Vector2(-1020 + float(i) * 55.0, 500 + float(i) * 30.0)
 		add_child(w)
-	for i in 4:
-		var e := Unit.new()
-		e.team = 1
-		e.position = Vector2(980 + float(i) * 55.0, -380)
-		add_child(e)
+	# 朔国驻防小队：3游侠 + 2冰凌射手 + 1潮灵（M1 冲刺三补 AI，当前站桩仇恨）
+	var squad := [
+		["youxia", Vector2(980, -350)], ["youxia", Vector2(1040, -300)], ["youxia", Vector2(920, -300)],
+		["binglingshou", Vector2(1080, -400)], ["binglingshou", Vector2(1000, -430)],
+		["chaoling", Vector2(960, -400)],
+	]
+	for s in squad:
+		var u := Defs.spawn(s[0], 1)
+		u.position = s[1]
+		add_child(u)
 
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:
 	var hud := BasicHUD.new()
-	hud.tips_text = "M1 经济：选大寨→训练炎民 | 选炎民→底部建造 | 右键矿脉采集 / 工地施工 | WASD平移 滚轮缩放"
+	hud.tips_text = "M1 战斗：右键敌人=攻击 | 焰阵造火矢手/爆炎卒 | 水克火(熄)/灼烧 | 选游侠→潜流隐身 | 火拆建筑返灵晶"
 	add_child(hud)
 	var sel := SelectionManager.new()
 	sel.setup(cam)

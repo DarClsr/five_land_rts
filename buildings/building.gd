@@ -7,6 +7,7 @@ var team := 0
 var hp := 1.0
 var max_hp := 1.0
 var complete := false  # 施工完成才生效
+var alive := true
 
 var _queue: Array[String] = []  # 待训练单位 id
 var _train_progress := 0.0
@@ -91,7 +92,7 @@ func is_dropoff() -> bool:
 
 
 func _spawn_trained(unit_id: String) -> void:
-	var u := _make_unit(unit_id)
+	var u := Defs.spawn(unit_id, team)
 	var udef: Dictionary = Defs.unit(unit_id)
 	u.pop = int(udef.get("pop", 1))
 	u.pop_reserved = true  # enqueue 时已预占人口
@@ -101,15 +102,30 @@ func _spawn_trained(unit_id: String) -> void:
 	u.command_move_to(position + side + Vector2(0, 80))
 
 
-func _make_unit(unit_id: String) -> Unit:
-	var u: Unit
-	match unit_id:
-		"yanmin":
-			u = Worker.new()
-		_:
-			u = Worker.new()  # M1-2 前战斗单位由 Worker 占位
-	u.team = team
-	return u
+func take_damage(amount: float, attacker: Node2D) -> void:
+	"""建筑为凡品，不吃五行克制。"""
+	if not alive:
+		return
+	hp -= amount
+	queue_redraw()
+	if hp <= 0.0:
+		_die(attacker)
+
+
+func _die(attacker: Node2D) -> void:
+	alive = false
+	var s := InkSplat.new()
+	s.position = position
+	s.splat_size = 60.0
+	get_parent().add_child(s)
+	# 燎原：火系摧毁敌方建筑，返还 30% 造价
+	if attacker != null and is_instance_valid(attacker) and str(attacker.get("element")) == "火":
+		var player := PlayerState.for_team(self, int(attacker.get("team")))
+		if player:
+			var refund := int(Defs.building(def_id).get("cost", 0) * 0.3)
+			if refund > 0:
+				player.add_crystals(refund)
+	queue_free()
 
 
 func _draw() -> void:

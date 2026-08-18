@@ -16,7 +16,7 @@ var _deposit_target := Vector2.INF
 
 func _ready() -> void:
 	super()
-	move_speed = float(Defs.unit("yanmin")["speed"])
+	base_speed = float(Defs.unit("yanmin")["speed"])
 	enable_stuck_heal = false  # 状态机自行驱动目标，交给自愈反而添乱
 
 

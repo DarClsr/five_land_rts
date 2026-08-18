@@ -89,6 +89,14 @@ func _refresh_buttons() -> void:
 	if has_worker:
 		for id in BUILDABLE:
 			_add_button(Defs.building(id)["name"] + " %d" % int(Defs.building(id)["cost"]), _start_placement.bind(id))
+	# 游侠在选 → 潜流切换
+	var has_stealth := false
+	for u in sel.selected:
+		if u is Unit and u.can_stealth:
+			has_stealth = true
+			break
+	if has_stealth:
+		_add_button("潜流/现身", _toggle_stealth)
 	# 选中大寨 → 训练按钮
 	var b: Building = sel.selected_building
 	if b != null and b.complete:
@@ -99,14 +107,16 @@ func _refresh_buttons() -> void:
 
 func _context_signature() -> String:
 	var worker := "0"
+	var stealth := "0"
 	for u in sel.selected:
 		if u is Worker:
 			worker = "1"
-			break
+		elif u is Unit and u.can_stealth:
+			stealth = "1"
 	var b := "0"
 	if sel.selected_building != null:
 		b = str(sel.selected_building.get_instance_id())
-	return worker + "|" + b
+	return worker + stealth + "|" + b
 
 
 func _add_button(text: String, cb: Callable) -> void:
@@ -114,6 +124,14 @@ func _add_button(text: String, cb: Callable) -> void:
 	btn.text = text
 	btn.pressed.connect(cb)
 	_btn_box.add_child(btn)
+
+
+func _toggle_stealth() -> void:
+	for u in sel.selected:
+		if u is Unit and u.can_stealth:
+			(u as Unit).toggle_stealth()
+	_status.text = "潜流形态：隐形 · 无法攻击 · 移速减半（穿水域 M2 实装）"
+	_status_clear_at = Time.get_ticks_msec() + 2500
 
 
 func _train_unit(hq: Building, unit_id: String) -> void:

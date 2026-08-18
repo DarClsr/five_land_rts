@@ -41,6 +41,11 @@ func _process(_delta: float) -> void:
 	if _dragging and hud:
 		var cur := get_viewport().get_mouse_position()
 		hud.set_drag_rect(Rect2(_drag_start, cur - _drag_start).abs())
+	# 清理阵亡单位
+	for i in range(selected.size() - 1, -1, -1):
+		var u := selected[i]
+		if not is_instance_valid(u) or not u.alive:
+			selected.remove_at(i)
 
 
 func _world_from_screen(p: Vector2) -> Vector2:
@@ -113,7 +118,12 @@ func _rect_select(screen_rect: Rect2, shift: bool) -> void:
 
 func _issue_smart_command(screen_pos: Vector2) -> void:
 	var wp := _world_from_screen(screen_pos)
-	# 智能指令：矿脉 → 采集；未完工工地 → 施工；否则 → 移动
+	# 智能指令：敌单位/建筑 → 攻击；矿脉 → 采集；未完工工地 → 施工；否则 → 移动
+	var enemy := _enemy_at(wp)
+	if enemy != null:
+		for u in selected:
+			u.command_attack(enemy)
+		return
 	var node := _gather_node_at(wp)
 	var site := _construction_site_at(wp)
 	if node != null:
@@ -139,6 +149,19 @@ func _gather_node_at(wp: Vector2) -> CrystalNode:
 	for n in get_tree().get_nodes_in_group("gather_nodes"):
 		if n is CrystalNode and not n.is_depleted() and n.global_position.distance_to(wp) <= 42.0:
 			return n
+	return null
+
+
+func _enemy_at(wp: Vector2) -> Node2D:
+	# 优先敌单位（半径 30），其次敌建筑（包围盒）
+	for u in get_tree().get_nodes_in_group("units"):
+		if u is Unit and u.alive and u.team != 0 and u.global_position.distance_to(wp) <= 30.0:
+			return u
+	for b in get_tree().get_nodes_in_group("buildings"):
+		if b is Building and b.alive and b.team != 0:
+			var size: Vector2 = Defs.building(b.def_id)["size"] * 0.5
+			if Rect2(b.global_position - size, size * 2.0).has_point(wp):
+				return b
 	return null
 
 
