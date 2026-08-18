@@ -11,8 +11,9 @@ extends Node
 @export var wave_growth := 2           # 每波增量
 @export var max_wave := 10             # 波次上限
 @export var wave_cooldown := 45.0      # 波间冷却（秒）
-@export var first_wave_delay := 60.0   # 首波缓冲（给玩家发展时间）
+@export var first_wave_delay := 120.0  # 首波缓冲（给玩家发展时间）
 @export var tick_interval := 2.0
+@export var barracks_id := "yanzhen"   # 兵营建筑 id（朔国为影卫堂）
 
 var team_id := 1
 var root: Node2D
@@ -75,7 +76,7 @@ func _tick() -> void:
 		_place_tent(player, hq)
 
 	# 造兵：游侠 3 / 冰凌 2 / 潮灵 1 循环
-	var barracks := _find_building("yanzhen")
+	var barracks := _find_building(barracks_id)
 	if barracks != null and troops.size() + barracks.queue_size() < _wave_size and barracks.queue_size() < 2:
 		var pick := "youxia"
 		var m := _built_count % 6

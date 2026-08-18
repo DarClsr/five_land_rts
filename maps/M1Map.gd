@@ -99,7 +99,7 @@ func _build_player_and_bases() -> PlayerState:
 	add_child(ehq)
 
 	var ebar := Building.new()
-	ebar.setup("yanzhen", 1, true)
+	ebar.setup("yingweitang", 1, true)
 	ebar.position = Vector2(1260, -430)
 	add_child(ebar)
 
@@ -115,6 +115,7 @@ func _build_player_and_bases() -> PlayerState:
 	# AI 与胜负
 	var ai := EnemyAI.new()
 	ai.setup(1, self)
+	ai.barracks_id = "yingweitang"
 	add_child(ai)
 
 	var victory := VictoryManager.new()
@@ -124,7 +125,7 @@ func _build_player_and_bases() -> PlayerState:
 
 
 func _build_units() -> void:
-	for i in 3:
+	for i in 4:
 		var w := Worker.new()
 		w.team = 0
 		w.position = Vector2(-1020 + float(i) * 55.0, 500 + float(i) * 30.0)
@@ -134,16 +135,11 @@ func _build_units() -> void:
 		var w1 := Defs.spawn("yanmin", 1)
 		w1.position = Vector2(1150 + float(i) * 50.0, -370)
 		add_child(w1)
-	# 朔国驻防小队：3游侠 + 2冰凌射手 + 1潮灵
-	var squad := [
-		["youxia", Vector2(980, -350)], ["youxia", Vector2(1040, -300)], ["youxia", Vector2(920, -300)],
-		["binglingshou", Vector2(1080, -400)], ["binglingshou", Vector2(1000, -430)],
-		["chaoling", Vector2(960, -400)],
-	]
-	for s in squad:
-		var u := Defs.spawn(s[0], 1)
-		u.position = s[1]
-		add_child(u)
+	# 朔国仅留 2 游侠看家，进攻部队由 AI 自产（首波不再碾压玩家）
+	for pos in [Vector2(1060, -360), Vector2(1130, -330)]:
+		var g := Defs.spawn("youxia", 1)
+		g.position = pos
+		add_child(g)
 
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:

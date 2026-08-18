@@ -1,7 +1,7 @@
 extends Node2D
 """AI 冒烟测试：跑 90 秒，验证敌方 AI 在运营（生产/采矿）并按期发起首波进攻。"""
 
-const TIMEOUT_FRAMES := 5400  # 60Hz × 90 秒
+const TIMEOUT_FRAMES := 9000  # 60Hz × 150 秒
 
 var _frames := 0
 var _started := false
@@ -36,11 +36,11 @@ func _physics_process(_delta: float) -> void:
 		_econ_ok = workers >= 4 or hq_queue > 0 or (player1 != null and player1.crystals != 300)
 		print("TEST_AI 30s: 民夫=%d 大寨队列=%d 灵晶=%s 运营=%s" % [
 			workers, hq_queue, player1.crystals if player1 != null else -1, _econ_ok])
-	# 75 秒：首波应已发出（首波缓冲 60s）
-	if _frames == 4500:
+	# 135 秒：首波应已发出（首波缓冲 120s）
+	if _frames == 8100:
 		var ai := get_tree().get_first_node_in_group("enemy_ai")
 		_wave_ok = ai != null and ai.wave_count >= 1
-		print("TEST_AI 75s: 已发波 %d 波=%s" % [ai.wave_count if ai != null else -1, _wave_ok])
+		print("TEST_AI 135s: 已发波 %d 波=%s" % [ai.wave_count if ai != null else -1, _wave_ok])
 	if _frames >= TIMEOUT_FRAMES:
 		if _econ_ok and _wave_ok:
 			print("TEST_AI PASS")

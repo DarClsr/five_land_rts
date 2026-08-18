@@ -149,6 +149,8 @@ func _draw() -> void:
 				Color(0.45, 0.42, 0.38, alpha))
 		"yanzhen":
 			draw_rect(Rect2(-8, -half.y + 10, 16, 20), Color(0.72, 0.18, 0.14, alpha))  # 焰字旗位
+		"yingweitang":
+			draw_rect(Rect2(-8, -half.y + 10, 16, 20), Color(0.25, 0.32, 0.45, alpha))  # 玄旗
 		"fengsui":
 			draw_rect(Rect2(-half + Vector2(10, 6), Vector2(size.x - 20, 8)), Color(0.6, 0.57, 0.52, alpha))
 			draw_circle(Vector2(0, -half.y + 6), 5.0, Color(0.72, 0.18, 0.14, alpha))

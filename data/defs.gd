@@ -40,9 +40,13 @@ const BUILDINGS := {
 		"name": "篝帐", "size": Vector2(72, 60), "hp": 240,
 		"cost": 60, "build_time": 12.0, "pop_cap": 8,
 	},
-	"yanzhen": {  # 焰阵：兵营
+	"yanzhen": {  # 焰阵：离国兵营
 		"name": "焰阵", "size": Vector2(96, 80), "hp": 600,
 		"cost": 120, "build_time": 18.0, "trains": ["huoshishou", "baoyanzu"],
+	},
+	"yingweitang": {  # 影卫堂：朔国兵营
+		"name": "影卫堂", "size": Vector2(96, 80), "hp": 600,
+		"cost": 120, "build_time": 18.0, "trains": ["youxia", "binglingshou", "chaoling"],
 	},
 	"fengsui": {  # 烽燧：防御塔（M1-2 解锁攻击）
 		"name": "烽燧", "size": Vector2(48, 64), "hp": 400,
