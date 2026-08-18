@@ -144,7 +144,7 @@ func _build_units() -> void:
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:
 	var hud := BasicHUD.new()
-	hud.tips_text = "M1 战斗：右键敌人=攻击 | 焰阵造火矢手/爆炎卒 | 水克火(熄)/灼烧 | 选游侠→潜流隐身 | 火拆建筑返灵晶"
+	hud.tips_text = "M1：右键敌人=攻击 | 焰阵造兵 | 家里造烽燧防守(80灵晶) | 水克火·冰凌减速 | 火拆建筑返灵晶"
 	add_child(hud)
 	var sel := SelectionManager.new()
 	sel.setup(cam)

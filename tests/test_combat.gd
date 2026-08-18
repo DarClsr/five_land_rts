@@ -7,6 +7,7 @@ var _fails := 0
 var _frames := 0
 var _duel_done := false
 var _burn_done := false
+var _tower_done := false
 var _spawned := false
 
 
@@ -34,6 +35,16 @@ func _ready() -> void:
 	c.position = Vector2(0, 400)
 	add_child(c)
 	set_meta("burn_unit", c)
+
+	# 4) 烽燧自动射击
+	var tower := Building.new()
+	tower.setup("fengsui", 0, true)
+	tower.position = Vector2(-200, 300)
+	add_child(tower)
+	var raider := Defs.spawn("youxia", 1)
+	raider.position = Vector2(-80, 300)
+	add_child(raider)
+	set_meta("tower_target", raider)
 
 	for i in 15:
 		await get_tree().physics_frame
@@ -66,10 +77,18 @@ func _physics_process(_delta: float) -> void:
 		if a_dead or b_dead:
 			_check(b_dead and not a_dead, "水克火：游侠应胜火矢手（a死=%s b死=%s）" % [a_dead, b_dead])
 			_duel_done = true
-	if _burn_done and _duel_done:
+	if not _tower_done:
+		var rt = get_meta("tower_target")
+		if rt == null or not is_instance_valid(rt):
+			_check(true, "烽燧击杀目标")
+			_tower_done = true
+		elif rt.hp < rt.max_hp:
+			_check(true, "烽燧自动射击（hp %.0f/%.0f）" % [rt.hp, rt.max_hp])
+			_tower_done = true
+	if _burn_done and _duel_done and _tower_done:
 		_finish()
 	elif _frames >= TIMEOUT_FRAMES:
-		_check(false, "超时：duel=%s burn=%s" % [_duel_done, _burn_done])
+		_check(false, "超时：duel=%s burn=%s tower=%s" % [_duel_done, _burn_done, _tower_done])
 		_finish()
 
 

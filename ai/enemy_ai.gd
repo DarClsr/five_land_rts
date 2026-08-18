@@ -10,7 +10,7 @@ extends Node
 @export var base_wave := 4             # 首波规模
 @export var wave_growth := 2           # 每波增量
 @export var max_wave := 10             # 波次上限
-@export var wave_cooldown := 45.0      # 波间冷却（秒）
+@export var wave_cooldown := 60.0      # 波间冷却（秒）
 @export var first_wave_delay := 120.0  # 首波缓冲（给玩家发展时间）
 @export var tick_interval := 2.0
 @export var barracks_id := "yanzhen"   # 兵营建筑 id（朔国为影卫堂）
@@ -119,6 +119,12 @@ func _update_wave() -> void:
 		if is_instance_valid(u) and u.alive:
 			alive += 1
 	if alive == 0 or _wave_elapsed > 90.0:
+		# 上一波仍压在敌方基地时不开新波，防止叠兵碾压
+		if alive > 0 and _wave_elapsed > 90.0:
+			var enemy_hq := _enemy_hq_pos()
+			for u in _wave_units:
+				if is_instance_valid(u) and u.alive and u.global_position.distance_to(enemy_hq) < 700.0:
+					return  # 仍在进攻，本波继续
 		_wave_active = false
 		_wave_units.clear()
 		_wave_size = mini(_wave_size + wave_growth, max_wave)

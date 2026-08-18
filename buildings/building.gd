@@ -12,6 +12,10 @@ var alive := true
 var _queue: Array[String] = []  # 待训练单位 id
 var _train_progress := 0.0
 var _selected := false
+var _tower_timer := 0.0
+
+const TOWER_RANGE := 230.0
+const TOWER_DMG := 12.0
 
 
 func setup(id: String, team_id: int, start_complete: bool) -> void:
@@ -45,6 +49,24 @@ func _process(delta: float) -> void:
 		if _train_progress >= unit_time:
 			_train_progress = 0.0
 			_spawn_trained(_queue.pop_front())
+	if complete and def_id == "fengsui":
+		_tower_tick(delta)
+
+
+func _tower_tick(delta: float) -> void:
+	"""烽燧：每 1.5 秒射击射程内最近敌单位（凡品攻击，不吃克制）。"""
+	_tower_timer -= delta
+	if _tower_timer > 0.0:
+		return
+	_tower_timer = 1.5
+	for u in get_tree().get_nodes_in_group("units"):
+		if u is Unit and u.alive and u.team != team:
+			if global_position.distance_to(u.global_position) <= TOWER_RANGE:
+				var p := Projectile.new()
+				p.setup(self, u, TOWER_DMG)
+				get_parent().add_child(p)
+				p.position = global_position + Vector2(0, -28)
+				return
 
 
 func add_build_progress(fraction: float) -> void:
