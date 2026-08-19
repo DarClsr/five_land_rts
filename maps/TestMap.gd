@@ -13,6 +13,7 @@ func _ready() -> void:
 	_build_navigation()
 	var cam := _build_camera()
 	_build_units()
+	_build_fog()
 	_build_hud_and_selection(cam)
 	_build_minimap(cam)
 
@@ -88,6 +89,12 @@ func _build_units() -> void:
 		e.team = 1
 		e.position = Vector2(1250.0 + float(i) * 50.0, -620.0)
 		add_child(e)
+
+
+func _build_fog() -> void:
+	var fog := FogOfWar.new()
+	fog.setup(MAP)
+	add_child(fog)
 
 
 func _build_hud_and_selection(cam: RTTSCamera) -> void:

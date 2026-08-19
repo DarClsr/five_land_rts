@@ -1,6 +1,6 @@
 class_name BasicHUD
 extends CanvasLayer
-"""M0 极简 HUD：操作提示、状态行、框选矩形。"""
+"""战场顶部信息与框选矩形。"""
 
 var sel_mgr: SelectionManager
 var cam: Camera2D
@@ -15,14 +15,34 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	var panel := PanelContainer.new()
+	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	panel.offset_left = 14.0
+	panel.offset_top = 12.0
+	panel.offset_right = -14.0
+	panel.offset_bottom = 68.0
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 7)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 7)
+	panel.add_child(margin)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	margin.add_child(box)
+
 	var tips := Label.new()
 	tips.text = tips_text
-	tips.position = Vector2(16, 10)
-	add_child(tips)
+	tips.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	box.add_child(tips)
 
 	_status = Label.new()
-	_status.position = Vector2(16, 34)
-	add_child(_status)
+	_status.modulate = Color(0.78, 0.76, 0.71)
+	box.add_child(_status)
 
 	_rect = SelectionRectControl.new()
 	add_child(_rect)

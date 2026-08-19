@@ -14,6 +14,7 @@ func _ready() -> void:
 	var cam := _build_camera()
 	var player := _build_player_and_bases()
 	_build_units()
+	_build_fog()
 	_build_hud_and_selection(cam, player)
 	_build_minimap(cam)
 
@@ -123,8 +124,7 @@ func _build_player_and_bases() -> PlayerState:
 
 func _build_units() -> void:
 	for i in 5:
-		var w := Worker.new()
-		w.team = 0
+		var w := Defs.spawn("yanmin", 0)
 		w.position = Vector2(-1020 + float(i) * 55.0, 500 + float(i) * 26.0)
 		add_child(w)
 	# 朔国 AI 民夫（密探，AI 会派去采矿并补足到 5）
@@ -137,6 +137,12 @@ func _build_units() -> void:
 		var g := Defs.spawn("youxia", 1)
 		g.position = pos
 		add_child(g)
+
+
+func _build_fog() -> void:
+	var fog := FogOfWar.new()
+	fog.setup(MAP)
+	add_child(fog)
 
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:

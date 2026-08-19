@@ -4,7 +4,6 @@ extends Unit
 
 enum State { IDLE, TO_MINE, MINING, TO_DEPOSIT, TO_BUILD, BUILDING }
 
-var unit_id := "yanmin"  # 由 Defs.spawn 注入（炎民/密探/俑匠共用状态机）
 var state := State.IDLE
 var carry := 0
 

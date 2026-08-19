@@ -3,6 +3,7 @@ extends CharacterBody2D
 """单位基类：寻路移动 + 战斗核心（攻击/追击/自仇恨/灼烧/减速/隐身/光环）。"""
 
 @export var team := 0
+@export var unit_id := ""
 @export var pop := 1
 @export var element := "凡"
 @export var max_hp := 60.0
@@ -55,12 +56,17 @@ func _ready() -> void:
 	add_to_group("units")
 	hp = max_hp
 	_sprite = Sprite2D.new()
-	var tex: ImageTexture = _tex_cache.get(element)
+	var visual_key := unit_id if unit_id != "" else element
+	var tex: ImageTexture = _tex_cache.get(visual_key)
 	if tex == null:
-		tex = PixelFigure.make_texture(Elements.element_color(element))
-		_tex_cache[element] = tex
+		tex = PixelFigure.make_texture(Elements.element_color(element), unit_id)
+		_tex_cache[visual_key] = tex
 	_sprite.texture = tex
 	_sprite.position = Vector2(0, -16)
+	if unit_id == "juyong":
+		_sprite.scale = Vector2(1.35, 1.35)
+	elif unit_id == "toushiji":
+		_sprite.scale = Vector2(1.2, 1.2)
 	add_child(_sprite)
 
 	_agent = NavigationAgent2D.new()
@@ -209,9 +215,9 @@ func _combat_tick(delta: float) -> bool:
 
 func _target_ok(t: Node2D) -> bool:
 	if t is Unit:
-		return (t as Unit).alive and (t as Unit).team != team
+		return (t as Unit).alive and (t as Unit).team != team and (team != 0 or t.visible)
 	if t is Building:
-		return (t as Building).alive and (t as Building).team != team
+		return (t as Building).alive and (t as Building).team != team and (team != 0 or t.visible)
 	return false
 
 
@@ -226,7 +232,7 @@ func _find_enemy() -> Node2D:
 	var best: Node2D = null
 	var best_d := AGGRO_RANGE
 	for u in get_tree().get_nodes_in_group("units"):
-		if u is Unit and u.alive and u.team != team and not u.stealthed:
+		if u is Unit and u.alive and u.team != team and not u.stealthed and (team != 0 or u.visible):
 			var d: float = global_position.distance_to(u.global_position) - 14.0
 			if d < best_d:
 				best_d = d
@@ -234,7 +240,7 @@ func _find_enemy() -> Node2D:
 	if best != null:
 		return best
 	for b in get_tree().get_nodes_in_group("buildings"):
-		if b is Building and b.alive and b.team != team:
+		if b is Building and b.alive and b.team != team and (team != 0 or b.visible):
 			var s: Vector2 = Defs.building(b.def_id)["size"]
 			var d: float = global_position.distance_to(b.global_position) - maxf(s.x, s.y) * 0.5
 			if d < best_d:

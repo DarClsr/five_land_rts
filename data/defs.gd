@@ -167,9 +167,9 @@ static func spawn(id: String, team_id: int) -> Unit:
 	var u: Unit
 	if def.get("worker", false):
 		u = Worker.new()
-		(u as Worker).unit_id = id
 	else:
 		u = Unit.new()
+	u.unit_id = id
 	u.team = team_id
 	u.element = str(def.get("element", "凡"))
 	u.max_hp = float(def.get("hp", 60))

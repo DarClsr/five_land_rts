@@ -117,12 +117,15 @@ func _rect_select(screen_rect: Rect2, shift: bool) -> void:
 
 
 func _issue_smart_command(screen_pos: Vector2) -> void:
+	if selected.is_empty():
+		return
 	var wp := _world_from_screen(screen_pos)
 	# 智能指令：敌单位/建筑 → 攻击；矿脉 → 采集；未完工工地 → 施工；否则 → 移动
 	var enemy := _enemy_at(wp)
 	if enemy != null:
 		for u in selected:
 			u.command_attack(enemy)
+		_show_command(enemy.global_position, "attack")
 		return
 	var node := _gather_node_at(wp)
 	var site := _construction_site_at(wp)
@@ -133,6 +136,7 @@ func _issue_smart_command(screen_pos: Vector2) -> void:
 				(u as Worker).command_gather(node)
 				any = true
 		if any:
+			_show_command(node.global_position, "gather")
 			return
 	if site != null:
 		var any_b := false
@@ -141,6 +145,7 @@ func _issue_smart_command(screen_pos: Vector2) -> void:
 				(u as Worker).command_build(site)
 				any_b = true
 		if any_b:
+			_show_command(site.global_position, "build")
 			return
 	_issue_move(screen_pos)
 
@@ -155,10 +160,10 @@ func _gather_node_at(wp: Vector2) -> CrystalNode:
 func _enemy_at(wp: Vector2) -> Node2D:
 	# 优先敌单位（半径 30），其次敌建筑（包围盒）
 	for u in get_tree().get_nodes_in_group("units"):
-		if u is Unit and u.alive and u.team != 0 and u.global_position.distance_to(wp) <= 30.0:
+		if u is Unit and u.alive and u.visible and u.team != 0 and u.global_position.distance_to(wp) <= 30.0:
 			return u
 	for b in get_tree().get_nodes_in_group("buildings"):
-		if b is Building and b.alive and b.team != 0:
+		if b is Building and b.alive and b.visible and b.team != 0:
 			var size: Vector2 = Defs.building(b.def_id)["size"] * 0.5
 			if Rect2(b.global_position - size, size * 2.0).has_point(wp):
 				return b
@@ -178,12 +183,20 @@ func _issue_move(screen_pos: Vector2) -> void:
 	if selected.is_empty():
 		return
 	var target := _world_from_screen(screen_pos)
+	_show_command(target, "move")
 	# 黄金螺旋散开，避免全员挤同一点
 	for i in selected.size():
 		var ang := float(i) * 2.39996
 		var rad := FORMATION_SPACING * sqrt(float(i) + 0.5)
 		var off := Vector2(cos(ang), sin(ang) * 0.7) * rad
 		selected[i].command_move_to(target + off)
+
+
+func _show_command(world_pos: Vector2, kind: String) -> void:
+	var marker := CommandMarker.new()
+	marker.kind = kind
+	marker.position = world_pos
+	get_parent().add_child(marker)
 
 
 func _deselect_building() -> void:
@@ -197,3 +210,35 @@ func _clear_selection() -> void:
 		u.set_selected(false)
 	selected.clear()
 	_deselect_building()
+
+
+class CommandMarker:
+	extends Node2D
+	var kind := "move"
+	var _life := 0.65
+
+	func _ready() -> void:
+		z_index = 100
+
+	func _process(delta: float) -> void:
+		_life -= delta
+		if _life <= 0.0:
+			queue_free()
+		else:
+			queue_redraw()
+
+	func _draw() -> void:
+		var progress := 1.0 - _life / 0.65
+		var radius := lerpf(7.0, 22.0, progress)
+		var alpha := clampf(_life / 0.35, 0.0, 1.0)
+		var color := Color(0.78, 0.23, 0.17, alpha)
+		if kind == "gather":
+			color = Color(0.42, 0.55, 0.70, alpha)
+		elif kind == "build":
+			color = Color(0.72, 0.58, 0.22, alpha)
+		draw_arc(Vector2.ZERO, radius, 0.0, TAU, 28, color, 2.0)
+		if kind == "attack":
+			draw_line(Vector2(-8, -8), Vector2(8, 8), color, 2.0)
+			draw_line(Vector2(8, -8), Vector2(-8, 8), color, 2.0)
+		else:
+			draw_circle(Vector2.ZERO, 2.5, color)

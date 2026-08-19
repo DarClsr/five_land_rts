@@ -82,7 +82,7 @@ func _tower_tick(delta: float) -> void:
 		return
 	_tower_timer = 1.5
 	for u in get_tree().get_nodes_in_group("units"):
-		if u is Unit and u.alive and u.team != team:
+		if u is Unit and u.alive and u.team != team and (team != 0 or u.visible):
 			if global_position.distance_to(u.global_position) <= TOWER_RANGE:
 				var p := Projectile.new()
 				p.setup(self, u, TOWER_DMG)

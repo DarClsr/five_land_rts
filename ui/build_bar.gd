@@ -13,7 +13,8 @@ var _placing_id := ""
 var _migrating: Building = null  # 迁制：待落位的建筑
 var _res_label: Label
 var _pop_label: Label
-var _btn_box: HBoxContainer
+var _selection_label: Label
+var _btn_box: HFlowContainer
 var _status: Label
 var _ghost: GhostControl
 var _ctx_sig := ""
@@ -34,29 +35,53 @@ func setup(camera: Camera2D, root: Node2D, selection: SelectionManager, p: Playe
 
 func _build_ui() -> void:
 	var bar := PanelContainer.new()
-	bar.position = Vector2(560, 1000)
-	bar.custom_minimum_size = Vector2(800, 72)
+	bar.anchor_left = 0.0
+	bar.anchor_top = 1.0
+	bar.anchor_right = 1.0
+	bar.anchor_bottom = 1.0
+	bar.offset_left = 14.0
+	bar.offset_top = -126.0
+	bar.offset_right = -328.0
+	bar.offset_bottom = -14.0
 	add_child(bar)
 
-	var box := HBoxContainer.new()
-	box.add_theme_constant_override("separation", 18)
-	bar.add_child(box)
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 8)
+	bar.add_child(margin)
+
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 6)
+	margin.add_child(stack)
+
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 18)
+	stack.add_child(header)
+
+	_selection_label = Label.new()
+	_selection_label.text = "未选中"
+	_selection_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(_selection_label)
 
 	_res_label = Label.new()
 	_res_label.text = "灵晶 200"
-	box.add_child(_res_label)
+	header.add_child(_res_label)
 
 	_pop_label = Label.new()
 	_pop_label.text = "人口 0/0"
-	box.add_child(_pop_label)
+	header.add_child(_pop_label)
 
-	_btn_box = HBoxContainer.new()
+	_btn_box = HFlowContainer.new()
 	_btn_box.add_theme_constant_override("separation", 10)
-	box.add_child(_btn_box)
+	_btn_box.custom_minimum_size.y = 34.0
+	stack.add_child(_btn_box)
 
 	_status = Label.new()
 	_status.text = ""
-	box.add_child(_status)
+	_status.modulate = Color(0.78, 0.76, 0.71)
+	stack.add_child(_status)
 
 	_ghost = GhostControl.new()
 	_ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -66,6 +91,7 @@ func _build_ui() -> void:
 func _process(_delta: float) -> void:
 	_res_label.text = "灵晶 %d" % player.crystals
 	_pop_label.text = "人口 %d/%d" % [player.pop_used, player.pop_cap]
+	_update_selection_label()
 	_refresh_buttons()
 	if Time.get_ticks_msec() > _status_clear_at:
 		_status.text = ""
@@ -128,8 +154,28 @@ func _context_signature() -> String:
 func _add_button(text: String, cb: Callable) -> void:
 	var btn := Button.new()
 	btn.text = text
+	btn.tooltip_text = text
+	btn.custom_minimum_size = Vector2(126, 34)
+	btn.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	btn.pressed.connect(cb)
 	_btn_box.add_child(btn)
+
+
+func _update_selection_label() -> void:
+	if sel == null:
+		return
+	if sel.selected_building != null:
+		var b := sel.selected_building
+		var bdef: Dictionary = Defs.building(b.def_id)
+		_selection_label.text = "%s  HP %d/%d  ·  队列 %d" % [bdef["name"], int(b.hp), int(b.max_hp), b.queue_size()]
+	elif sel.selected.size() == 1:
+		var u := sel.selected[0]
+		var unit_name := str(Defs.unit(u.unit_id).get("name", "单位"))
+		_selection_label.text = "%s  ·  %s  ·  HP %d/%d" % [unit_name, u.element, int(u.hp), int(u.max_hp)]
+	elif not sel.selected.is_empty():
+		_selection_label.text = "已选中 %d 个单位" % sel.selected.size()
+	else:
+		_selection_label.text = "未选中  ·  左键框选，右键下令"
 
 
 func _toggle_stealth() -> void:
@@ -263,7 +309,6 @@ class GhostControl:
 	var _pos := Vector2.INF
 	var _id := ""
 	var _valid := false
-	var _cam: Camera2D
 
 	func update_ghost(world_pos: Vector2, id: String, valid: bool) -> void:
 		_pos = world_pos
@@ -276,8 +321,8 @@ class GhostControl:
 			return
 		var vp := get_viewport()
 		var screen := vp.get_canvas_transform() * _pos
-		var size: Vector2 = Defs.building(_id)["size"]
-		var rect := Rect2(screen - size * 0.5, size)
+		var footprint: Vector2 = Defs.building(_id)["size"]
+		var rect := Rect2(screen - footprint * 0.5, footprint)
 		var col := Color(0.2, 0.6, 0.3, 0.4) if _valid else Color(0.75, 0.2, 0.15, 0.4)
 		draw_rect(rect, col, true)
 		draw_rect(rect, Color(col.r, col.g, col.b, 0.95), false, 2.0)

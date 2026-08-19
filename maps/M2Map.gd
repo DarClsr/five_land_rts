@@ -14,6 +14,7 @@ func _ready() -> void:
 	var cam := _build_camera()
 	var player := _build_player_and_bases()
 	_build_units()
+	_build_fog()
 	_build_hud_and_selection(cam, player)
 	_build_minimap(cam)
 
@@ -138,6 +139,12 @@ func _build_units() -> void:
 		var g := Defs.spawn("youxia", 1)
 		g.position = pos
 		add_child(g)
+
+
+func _build_fog() -> void:
+	var fog := FogOfWar.new()
+	fog.setup(MAP)
+	add_child(fog)
 
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:

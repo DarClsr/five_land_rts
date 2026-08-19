@@ -34,19 +34,28 @@ func setup(world_cam: Camera2D, rect: Rect2, sub_parent: Node) -> void:
 
 
 func _build_panel(sub: SubViewport) -> void:
-	var vs := Vector2(1920, 1080)
-	var origin := vs - PANEL_SIZE - Vector2(MARGIN, MARGIN)
-
 	var frame := ColorRect.new()
-	frame.position = origin - Vector2(2, 2)
-	frame.size = PANEL_SIZE + Vector2(4, 4)
+	frame.anchor_left = 1.0
+	frame.anchor_top = 1.0
+	frame.anchor_right = 1.0
+	frame.anchor_bottom = 1.0
+	frame.offset_left = -PANEL_SIZE.x - MARGIN - 2.0
+	frame.offset_top = -PANEL_SIZE.y - MARGIN - 2.0
+	frame.offset_right = -MARGIN + 2.0
+	frame.offset_bottom = -MARGIN + 2.0
 	frame.color = Color(0.12, 0.11, 0.10, 0.85)
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(frame)
 
 	_tex = TextureRect.new()
-	_tex.position = origin
-	_tex.size = PANEL_SIZE
+	_tex.anchor_left = 1.0
+	_tex.anchor_top = 1.0
+	_tex.anchor_right = 1.0
+	_tex.anchor_bottom = 1.0
+	_tex.offset_left = -PANEL_SIZE.x - MARGIN
+	_tex.offset_top = -PANEL_SIZE.y - MARGIN
+	_tex.offset_right = -MARGIN
+	_tex.offset_bottom = -MARGIN
 	_tex.texture = sub.get_texture()
 	_tex.stretch_mode = TextureRect.STRETCH_SCALE
 	_tex.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
