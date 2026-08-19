@@ -177,7 +177,12 @@ func _update_selection_label() -> void:
 	elif sel.selected.size() == 1:
 		var u := sel.selected[0]
 		var unit_name := str(Defs.unit(u.unit_id).get("name", "单位"))
-		_selection_label.text = "%s  ·  %s  ·  HP %d/%d" % [unit_name, u.element, int(u.hp), int(u.max_hp)]
+		var state := ""
+		if u.ambush_time > 0.0:
+			state = "  ·  现身突击"
+		elif u.uses_water_network and u.is_in_shallow_water():
+			state = "  ·  水网疾行"
+		_selection_label.text = "%s  ·  %s  ·  HP %d/%d%s" % [unit_name, u.element, int(u.hp), int(u.max_hp), state]
 	elif not sel.selected.is_empty():
 		_selection_label.text = "已选中 %d 个单位" % sel.selected.size()
 	else:
@@ -185,10 +190,12 @@ func _update_selection_label() -> void:
 
 
 func _toggle_stealth() -> void:
+	var revealed := false
 	for u in sel.selected:
 		if u is Unit and u.can_stealth:
 			(u as Unit).toggle_stealth()
-	_status.text = "潜流形态：隐形 · 无法攻击 · 移速减半（穿水域 M2 实装）"
+			revealed = revealed or not u.stealthed
+	_status.text = "现身突击：3 秒移速与伤害 +25%" if revealed else "潜流形态：隐形 · 无法攻击 · 移速减半"
 	_status_clear_at = Time.get_ticks_msec() + 2500
 
 

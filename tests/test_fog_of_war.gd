@@ -53,6 +53,24 @@ func _ready() -> void:
 	fog.refresh_now()
 	_expect(fog.is_currently_visible(Vector2(480, 0)), "防御塔应提供较大视野")
 
+	var wu_state := PlayerState.new()
+	wu_state.setup(0, "shuo")
+	add_child(wu_state)
+	var watchtower := Building.new()
+	watchtower.setup("fengsui", 0, true)
+	watchtower.position = Vector2.ZERO
+	add_child(watchtower)
+	var hidden_enemy := Unit.new()
+	hidden_enemy.team = 1
+	hidden_enemy.position = Vector2(100, 0)
+	hidden_enemy.stealthed = true
+	add_child(hidden_enemy)
+	fog.refresh_now()
+	_expect(hidden_enemy.visible, "东吴水寨瞭台应识破范围内潜行")
+	wu_state.faction = "li"
+	fog.refresh_now()
+	_expect(not hidden_enemy.visible, "蜀汉烽火台不应获得反隐")
+
 	if _failures == 0:
 		print("TEST_FOG PASS")
 		get_tree().quit(0)

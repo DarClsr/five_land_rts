@@ -2,6 +2,7 @@ extends Node2D
 """M1 对战地图：蜀汉 vs 东吴，验证经济、争夺、AI 与胜负闭环。"""
 
 const MAP := Rect2(-1600, -900, 3200, 1800)
+const SHALLOW_WATER := preload("res://art/shallow_water.gd")
 
 var _obstacles: Array[PackedVector2Array] = []
 
@@ -32,6 +33,14 @@ func _build_paper() -> void:
 
 
 func _build_terrain() -> void:
+	for spec in [
+		[Vector2(180, 80), Vector2(1120, 170)],
+		[Vector2(-980, -540), Vector2(620, 130)],
+	]:
+		var water := SHALLOW_WATER.new()
+		water.position = spec[0]
+		water.size = spec[1]
+		add_child(water)
 	var rock_specs := [
 		[Vector2(-150, -150), Vector2(320, 220), 3],
 		[Vector2(350, 580), Vector2(520, 280), 6],
@@ -150,7 +159,7 @@ func _build_fog() -> void:
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:
 	var hud := BasicHUD.new()
-	hud.tips_text = "蜀汉 vs 东吴 | 连营邻接加固 | 白毦营造兵 | 烽火台防守 | 水克火·弓手减速"
+	hud.tips_text = "蜀汉 vs 东吴 | 连营邻接加固 | 东吴水军浅水疾行 | 游侠现身突击 | 水寨瞭台反隐"
 	add_child(hud)
 	var sel := SelectionManager.new()
 	sel.setup(cam)

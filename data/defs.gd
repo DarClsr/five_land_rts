@@ -20,19 +20,21 @@ const UNITS := {
 	# 朔国（水）
 	"mijian": {
 		"name": "密探", "element": "水", "hp": 60, "dmg": 0, "speed": 140.0,
-		"cost": 50, "build_time": 8.0, "pop": 1, "worker": true,
+		"cost": 50, "build_time": 8.0, "pop": 1, "worker": true, "water_network": true,
 	},
 	"youxia": {
 		"name": "锦帆游侠", "element": "水", "hp": 90, "dmg": 10, "range": 36.0, "cd": 0.9,
-		"speed": 185.0, "can_stealth": true, "cost": 100, "build_time": 13.0, "pop": 1,
+		"speed": 185.0, "can_stealth": true, "water_network": true,
+		"cost": 100, "build_time": 13.0, "pop": 1,
 	},
 	"binglingshou": {
 		"name": "水军弓手", "element": "水", "hp": 75, "dmg": 8, "range": 170.0, "cd": 1.3,
-		"speed": 145.0, "ranged": true, "slow": true, "cost": 95, "build_time": 13.0, "pop": 1,
+		"speed": 145.0, "ranged": true, "slow": true, "water_network": true,
+		"cost": 95, "build_time": 13.0, "pop": 1,
 	},
 	"chaoling": {
 		"name": "潮灵", "element": "水", "hp": 90, "dmg": 0, "speed": 155.0,
-		"aura": true, "cost": 80, "build_time": 10.0, "pop": 1,
+		"aura": true, "water_network": true, "cost": 80, "build_time": 10.0, "pop": 1,
 	},
 	# 大衍（土）
 	"yongjiang": {
@@ -193,5 +195,6 @@ static func spawn(id: String, team_id: int) -> Unit:
 	u.has_repair_aura = bool(def.get("repair_aura", false))
 	u.has_sharp_aura = bool(def.get("sharp_aura", false))
 	u.can_stealth = bool(def.get("can_stealth", false))
+	u.uses_water_network = bool(def.get("water_network", false))
 	u.pop = int(def.get("pop", 1))
 	return u

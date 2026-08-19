@@ -8,6 +8,7 @@ var hp := 1.0
 var max_hp := 1.0
 var complete := false  # 施工完成才生效
 var alive := true
+var applies_slow := false
 
 var _queue: Array[String] = []  # 待训练单位 id
 var _train_progress := 0.0
@@ -78,19 +79,26 @@ func _process(delta: float) -> void:
 
 
 func _tower_tick(delta: float) -> void:
-	"""烽燧：每 1.5 秒射击射程内最近敌单位（凡品攻击，不吃克制）。"""
+	"""瞭台每 1.5 秒射击；东吴水寨瞭台额外反隐并减速。"""
 	_tower_timer -= delta
 	if _tower_timer > 0.0:
 		return
 	_tower_timer = 1.5
 	for u in get_tree().get_nodes_in_group("units"):
-		if u is Unit and u.alive and u.team != team and (team != 0 or u.visible):
-			if global_position.distance_to(u.global_position) <= TOWER_RANGE:
-				var p := Projectile.new()
-				p.setup(self, u, TOWER_DMG)
-				get_parent().add_child(p)
-				p.position = global_position + Vector2(0, -28)
-				return
+		if not (u is Unit) or not u.alive or u.team == team:
+			continue
+		var detects_hidden := detects_stealth_at(u.global_position)
+		if u.stealthed and not detects_hidden:
+			continue
+		if team == 0 and not u.visible and not detects_hidden:
+			continue
+		if global_position.distance_to(u.global_position) <= TOWER_RANGE:
+			applies_slow = detects_stealth()
+			var p := Projectile.new()
+			p.setup(self, u, TOWER_DMG)
+			get_parent().add_child(p)
+			p.position = global_position + Vector2(0, -28)
+			return
 
 
 func add_build_progress(fraction: float) -> void:
@@ -139,6 +147,15 @@ func is_dropoff() -> bool:
 
 func is_hq() -> bool:
 	return Defs.building(def_id).get("hq", false)
+
+
+func detects_stealth() -> bool:
+	var player := PlayerState.for_team(self, team)
+	return complete and def_id == "fengsui" and player != null and player.faction == "shuo"
+
+
+func detects_stealth_at(world_point: Vector2) -> bool:
+	return detects_stealth() and global_position.distance_to(world_point) <= TOWER_RANGE
 
 
 func has_encampment_bonus() -> bool:

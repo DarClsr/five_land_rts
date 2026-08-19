@@ -103,10 +103,18 @@ func _update_image() -> void:
 func _update_enemy_visibility() -> void:
 	for unit in get_tree().get_nodes_in_group("units"):
 		if unit is Unit:
-			unit.visible = true if unit.team == 0 else is_currently_visible(unit.global_position) and not unit.stealthed
+			var detected: bool = bool(unit.stealthed) and _detected_by_watchtower(unit.global_position)
+			unit.visible = true if unit.team == 0 else is_currently_visible(unit.global_position) and (not unit.stealthed or detected)
 	for building in get_tree().get_nodes_in_group("buildings"):
 		if building is Building:
 			building.visible = true if building.team == 0 else is_currently_visible(building.global_position)
+
+
+func _detected_by_watchtower(world_point: Vector2) -> bool:
+	for building in get_tree().get_nodes_in_group("buildings"):
+		if building is Building and building.alive and building.team == 0 and building.detects_stealth_at(world_point):
+			return true
+	return false
 
 
 func _source_radius(source: Node2D) -> float:

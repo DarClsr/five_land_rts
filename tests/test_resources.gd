@@ -48,6 +48,14 @@ func _check_map(path: String, label: String) -> void:
 		_expect(closest.distance_to(node.global_position) <= CrystalNode.APPROACH_DIST,
 			"%s 资源点 %s 应可到达" % [label, node.position])
 	_expect(map.find_child("ResourceMarkers", true, false) != null, "%s 小地图应有资源标记层" % label)
+	var waters := get_tree().get_nodes_in_group("shallow_water")
+	_expect(waters.size() == 2, "%s 应有 2 段浅水水网" % label)
+	var rich_in_water := false
+	for water in waters:
+		if water.has_method("contains_world_point") and rich_node != null and water.contains_world_point(rich_node.global_position):
+			rich_in_water = true
+			break
+	_expect(rich_in_water, "%s 中央富灵脉应位于浅水水网" % label)
 	map.queue_free()
 	await get_tree().process_frame
 

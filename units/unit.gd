@@ -19,6 +19,7 @@ extends CharacterBody2D
 @export var has_sharp_aura := false  # 玄铁兵魄：增伤光环
 @export var can_stealth := false     # 游侠：潜流形态
 @export var has_aura := false        # 潮灵：涨潮光环
+@export var uses_water_network := false
 @export var is_worker := false
 
 var hp := 0.0
@@ -34,6 +35,7 @@ var no_burn_until := 0
 var slow_time := 0.0
 var stun_time := 0.0
 var stealthed := false
+var ambush_time := 0.0
 var aura_mult := 1.0
 var dmg_buff_mult := 1.0  # 玄铁兵魄光环
 var _repairing := false   # 窑火匠光环内
@@ -48,6 +50,9 @@ var _scan_timer := 0.0
 var _aura_timer := 0.0
 const AGGRO_RANGE := 240.0
 const AURA_RADIUS := 130.0
+const WATER_SPEED_MULT := 1.35
+const AMBUSH_TIME := 3.0
+const AMBUSH_MULT := 1.25
 
 static var _tex_cache := {}
 
@@ -102,7 +107,10 @@ func toggle_stealth() -> void:
 		return
 	stealthed = not stealthed
 	if stealthed:
+		ambush_time = 0.0
 		attack_target = null
+	else:
+		ambush_time = AMBUSH_TIME
 
 
 # ---- 主循环 ----
@@ -135,8 +143,23 @@ func _speed_mult() -> float:
 		m *= 0.5
 	if slow_time > 0.0:
 		m *= Elements.SLOW_FACTOR
+	if uses_water_network and is_in_shallow_water():
+		m *= WATER_SPEED_MULT
+	if ambush_time > 0.0:
+		m *= AMBUSH_MULT
 	m *= aura_mult
 	return m
+
+
+func is_in_shallow_water() -> bool:
+	for water in get_tree().get_nodes_in_group("shallow_water"):
+		if water.has_method("contains_world_point") and water.contains_world_point(global_position):
+			return true
+	return false
+
+
+func attack_damage_multiplier() -> float:
+	return dmg_buff_mult * (AMBUSH_MULT if ambush_time > 0.0 else 1.0)
 
 
 func _update_status(delta: float) -> void:
@@ -147,6 +170,7 @@ func _update_status(delta: float) -> void:
 			_die(null)
 			return
 	slow_time = maxf(0.0, slow_time - delta)
+	ambush_time = maxf(0.0, ambush_time - delta)
 	_aura_timer -= delta
 	if _aura_timer <= 0.0:
 		_aura_timer = 0.6
@@ -266,7 +290,7 @@ func take_damage(amount: float, attacker: Node2D) -> void:
 	var att_buff := 1.0
 	if attacker != null and is_instance_valid(attacker) and attacker.get("element") != null:
 		att_elem = str(attacker.element)
-		att_buff = float(attacker.get("dmg_buff_mult"))
+		att_buff = attacker.attack_damage_multiplier() if attacker is Unit else float(attacker.get("dmg_buff_mult"))
 	hp -= amount * att_buff * Elements.multiplier(att_elem, element)
 	# 「熄」：水克火，浇灭灼烧并短暂免疫
 	if att_elem == "水" and element == "火":
