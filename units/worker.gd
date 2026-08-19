@@ -4,6 +4,7 @@ extends Unit
 
 enum State { IDLE, TO_MINE, MINING, TO_DEPOSIT, TO_BUILD, BUILDING }
 
+var unit_id := "yanmin"  # 由 Defs.spawn 注入（炎民/密探/俑匠共用状态机）
 var state := State.IDLE
 var carry := 0
 
@@ -16,7 +17,7 @@ var _deposit_target := Vector2.INF
 
 func _ready() -> void:
 	super()
-	base_speed = float(Defs.unit("yanmin")["speed"])
+	base_speed = float(Defs.unit(unit_id)["speed"])
 	enable_stuck_heal = false  # 状态机自行驱动目标，交给自愈反而添乱
 
 

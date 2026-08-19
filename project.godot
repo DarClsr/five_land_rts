@@ -4,7 +4,7 @@ config_version=5
 [application]
 
 config/name="五行"
-run/main_scene="res://maps/M1Map.tscn"
+run/main_scene="res://maps/M2Map.tscn"
 config/features=PackedStringArray("4.7")
 
 [autoload]

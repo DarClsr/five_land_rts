@@ -7,13 +7,15 @@ extends Node
 """
 
 @export var keep_workers := 5          # 民夫维持数
-@export var base_wave := 4             # 首波规模
+@export var base_wave := 3             # 首波规模
 @export var wave_growth := 2           # 每波增量
 @export var max_wave := 10             # 波次上限
 @export var wave_cooldown := 60.0      # 波间冷却（秒）
-@export var first_wave_delay := 120.0  # 首波缓冲（给玩家发展时间）
+@export var first_wave_delay := 150.0  # 首波缓冲（给玩家发展时间）
 @export var tick_interval := 2.0
 @export var barracks_id := "yanzhen"   # 兵营建筑 id（朔国为影卫堂）
+@export var hq_id := "dazhai"          # 主基地建筑 id（朔国为坞堡）
+@export var worker_id := "yanmin"      # 民夫单位 id（朔国为密探）
 
 var team_id := 1
 var root: Node2D
@@ -58,7 +60,7 @@ func _tick() -> void:
 				workers.append(u)
 			elif u.attack_range > 0.0:
 				troops.append(u)
-	var hq := _find_building("dazhai")
+	var hq := _find_building(hq_id)
 
 	# 民夫闲置 → 采矿
 	for w in workers:
@@ -69,7 +71,7 @@ func _tick() -> void:
 
 	# 补民夫
 	if hq != null and workers.size() < keep_workers and hq.queue_size() == 0:
-		hq.enqueue("yanmin")
+		hq.enqueue(worker_id)
 
 	# 人口不足 → 造篝帐（免施工，直接落成）
 	if player.pop_used + 1 > player.pop_cap and player.can_spend(60) and hq != null:
@@ -156,8 +158,9 @@ func _guard_point(hq: Building) -> Vector2:
 
 
 func _enemy_hq_pos() -> Vector2:
+	"""敌方主基地 = 敌方带回缴点的建筑。"""
 	for b in root.get_tree().get_nodes_in_group("buildings"):
-		if b is Building and b.alive and b.def_id == "dazhai" and b.team != team_id:
+		if b is Building and b.alive and b.team != team_id and b.is_dropoff():
 			return b.position
 	return Vector2.ZERO
 

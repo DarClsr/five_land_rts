@@ -3,7 +3,6 @@ extends CanvasLayer
 """底部指令栏：资源/人口显示 + 上下文按钮（大寨训练 / 民夫建造）+ 建造摆放模式。"""
 
 const PLACE_MARGIN := 28.0
-const BUILDABLE := ["gaizhang", "yanzhen", "fengsui"]
 
 var cam: Camera2D
 var map_root: Node2D
@@ -11,6 +10,7 @@ var sel: SelectionManager
 var player: PlayerState
 
 var _placing_id := ""
+var _migrating: Building = null  # 迁制：待落位的建筑
 var _res_label: Label
 var _pop_label: Label
 var _btn_box: HBoxContainer
@@ -87,7 +87,7 @@ func _refresh_buttons() -> void:
 			has_worker = true
 			break
 	if has_worker:
-		for id in BUILDABLE:
+		for id in Defs.faction(player.faction)["build"]:
 			_add_button(Defs.building(id)["name"] + " %d" % int(Defs.building(id)["cost"]), _start_placement.bind(id))
 	# 游侠在选 → 潜流切换
 	var has_stealth := false
@@ -97,12 +97,18 @@ func _refresh_buttons() -> void:
 			break
 	if has_stealth:
 		_add_button("潜流/现身", _toggle_stealth)
-	# 选中大寨 → 训练按钮
+	# 选中己方完工建筑 → 训练 / 能力 / 迁移
 	var b: Building = sel.selected_building
 	if b != null and b.complete:
-		for uid in Defs.building(b.def_id).get("trains", []):
+		var bdef: Dictionary = Defs.building(b.def_id)
+		for uid in bdef.get("trains", []):
 			var udef: Dictionary = Defs.unit(uid)
 			_add_button("训练%s %d" % [udef["name"], int(udef["cost"])], _train_unit.bind(b, uid))
+		for ability in bdef.get("abilities", []):
+			var label := "归尘唤俑（2尘1俑）" if ability == "dust_summon" else "归尘炼晶（1尘4晶）"
+			_add_button(label, _run_ability.bind(b, ability))
+		if player.faction == "yan" and not bdef.get("no_migrate", false) and not bdef.get("wall", false):
+			_add_button("迁移", _start_migrate.bind(b))
 
 
 func _context_signature() -> String:
@@ -143,23 +149,50 @@ func _train_unit(hq: Building, unit_id: String) -> void:
 
 
 func _start_placement(id: String) -> void:
+	_migrating = null
 	_placing_id = id
 	_status.text = "点击地图放置，右键/ESC 取消"
 	_status_clear_at = Time.get_ticks_msec() + 4000
 
 
+func _run_ability(b: Building, ability: String) -> void:
+	_status.text = b.run_ability(ability)
+	_status_clear_at = Time.get_ticks_msec() + 2500
+
+
+func _start_migrate(b: Building) -> void:
+	_placing_id = ""
+	_migrating = b
+	_status.text = "迁制：点击新址落位，右键/ESC 取消"
+	_status_clear_at = Time.get_ticks_msec() + 4000
+
+
+func _active_ghost_id() -> String:
+	if _placing_id != "":
+		return _placing_id
+	if _migrating != null:
+		return _migrating.def_id
+	return ""
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if _placing_id == "":
+	if _placing_id == "" and _migrating == null:
 		return
 	if event is InputEventMouseButton and event.pressed:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			var wp := _screen_to_world(event.position)
 			if _placement_valid(wp):
-				_place(wp)
-				_placing_id = ""
+				if _migrating != null:
+					_migrating.start_migrate(wp)
+					_status.text = "迁移落位，自重建中…"
+					_status_clear_at = Time.get_ticks_msec() + 2000
+					_migrating = null
+				else:
+					_place(wp)
+					_placing_id = ""
 				get_viewport().set_input_as_handled()
 			else:
-				_status.text = "此处无法建造"
+				_status.text = "此处无法落位"
 				_status_clear_at = Time.get_ticks_msec() + 1500
 			get_viewport().set_input_as_handled()
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
@@ -168,14 +201,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.pressed and event.physical_keycode == KEY_ESCAPE:
 		_cancel_placement()
 		get_viewport().set_input_as_handled()
-	if _placing_id != "":
-		_ghost.update_ghost(_screen_to_world(get_viewport().get_mouse_position()), _placing_id, _placement_valid(_screen_to_world(get_viewport().get_mouse_position())))
+	var ghost_id := _active_ghost_id()
+	if ghost_id != "":
+		var mp := _screen_to_world(get_viewport().get_mouse_position())
+		_ghost.update_ghost(mp, ghost_id, _placement_valid(mp))
 	else:
 		_ghost.update_ghost(Vector2.INF, "", false)
 
 
 func _cancel_placement() -> void:
 	_placing_id = ""
+	_migrating = null
+	_ghost.update_ghost(Vector2.INF, "", false)
 	_ghost.update_ghost(Vector2.INF, "", false)
 
 
@@ -184,10 +221,16 @@ func _screen_to_world(p: Vector2) -> Vector2:
 
 
 func _placement_valid(wp: Vector2) -> bool:
-	var size: Vector2 = Defs.building(_placing_id)["size"]
+	var id := _active_ghost_id()
+	if id == "":
+		return false
+	var size: Vector2 = Defs.building(id)["size"]
 	var rect := Rect2(wp - size * 0.5 - Vector2.ONE * PLACE_MARGIN, size + Vector2.ONE * PLACE_MARGIN * 2.0)
 	for b in map_root.get_tree().get_nodes_in_group("buildings"):
 		if b is Building:
+			# 迁移模式忽略自己
+			if b == _migrating:
+				continue
 			var bs: Vector2 = Defs.building(b.def_id)["size"]
 			if rect.intersects(Rect2(b.global_position - bs * 0.5, bs)):
 				return false

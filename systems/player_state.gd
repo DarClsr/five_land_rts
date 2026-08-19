@@ -5,6 +5,7 @@ extends Node
 signal crystals_changed(value: int)
 
 var team := 0
+var faction := "li"
 var crystals := 200
 var pop_used := 0
 var pop_cap := 0
@@ -12,8 +13,9 @@ var pop_cap := 0
 const START_CRYSTALS := 200
 
 
-func setup(team_id: int) -> void:
+func setup(team_id: int, faction_id := "li") -> void:
 	team = team_id
+	faction = faction_id
 	crystals = START_CRYSTALS
 	add_to_group("player_%d" % team_id)
 

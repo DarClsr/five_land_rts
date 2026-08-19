@@ -12,6 +12,10 @@ extends CharacterBody2D
 @export var attack_cd := 1.0
 @export var ranged := false
 @export var applies_slow := false   # 冰凌射手：命中减速
+@export var applies_stun := false   # 地灵师：命中眩晕
+@export var siege := false          # 投石机：对建筑伤害翻倍
+@export var has_repair_aura := false  # 窑火匠：修缮造物（土/凡）
+@export var has_sharp_aura := false  # 玄铁兵魄：增伤光环
 @export var can_stealth := false     # 游侠：潜流形态
 @export var has_aura := false        # 潮灵：涨潮光环
 @export var is_worker := false
@@ -27,8 +31,11 @@ var attack_target: Node2D = null     # Unit 或 Building（duck-typing）
 var burn_time := 0.0
 var no_burn_until := 0
 var slow_time := 0.0
+var stun_time := 0.0
 var stealthed := false
 var aura_mult := 1.0
+var dmg_buff_mult := 1.0  # 玄铁兵魄光环
+var _repairing := false   # 窑火匠光环内
 
 var _agent: NavigationAgent2D
 var _sprite: Sprite2D
@@ -97,6 +104,11 @@ func toggle_stealth() -> void:
 func _physics_process(delta: float) -> void:
 	if not alive:
 		return
+	# 眩晕：不能移动不能攻击
+	if stun_time > 0.0:
+		stun_time -= delta
+		velocity = Vector2.ZERO
+		return
 	_update_status(delta)
 	var attacking_in_place := _combat_tick(delta)
 	if attacking_in_place:
@@ -132,7 +144,24 @@ func _update_status(delta: float) -> void:
 	_aura_timer -= delta
 	if _aura_timer <= 0.0:
 		_aura_timer = 0.6
-		aura_mult = 1.2 if _near_ally_tide_spirit() else 1.0
+		var near_tide := false
+		var near_sharp := false
+		_repairing = false
+		for u in get_tree().get_nodes_in_group("units"):
+			if not (u is Unit) or not u.alive or u.team != team:
+				continue
+			if u.has_aura and global_position.distance_to(u.global_position) <= AURA_RADIUS:
+				near_tide = true
+			if u.has_sharp_aura and global_position.distance_to(u.global_position) <= AURA_RADIUS:
+				near_sharp = true
+			if u.has_repair_aura and global_position.distance_to(u.global_position) <= AURA_RADIUS:
+				_repairing = true
+		aura_mult = 1.2 if near_tide else 1.0
+		dmg_buff_mult = 1.2 if near_sharp else 1.0
+	# 窑火匠修缮：造物（土/凡）光环内缓慢回复
+	if _repairing and (element == "土" or element == "凡") and hp < max_hp:
+		hp = minf(max_hp, hp + 2.0 * delta)
+		queue_redraw()
 	# 视觉：灼烧泛红 / 潜流半透明
 	if _sprite != null:
 		_sprite.modulate = Color(1.0, 0.7, 0.65) if burn_time > 0.0 else Color.WHITE
@@ -145,7 +174,6 @@ func _near_ally_tide_spirit() -> bool:
 			if global_position.distance_to(u.global_position) <= AURA_RADIUS:
 				return true
 	return false
-
 
 # ---- 战斗 ----
 
@@ -229,9 +257,11 @@ func take_damage(amount: float, attacker: Node2D) -> void:
 	if not alive:
 		return
 	var att_elem := "凡"
+	var att_buff := 1.0
 	if attacker != null and is_instance_valid(attacker) and attacker.get("element") != null:
 		att_elem = str(attacker.element)
-	hp -= amount * Elements.multiplier(att_elem, element)
+		att_buff = float(attacker.get("dmg_buff_mult"))
+	hp -= amount * att_buff * Elements.multiplier(att_elem, element)
 	# 「熄」：水克火，浇灭灼烧并短暂免疫
 	if att_elem == "水" and element == "火":
 		burn_time = 0.0
@@ -242,6 +272,9 @@ func take_damage(amount: float, attacker: Node2D) -> void:
 	# 冰凌：命中减速
 	if attacker != null and is_instance_valid(attacker) and bool(attacker.get("applies_slow")):
 		slow_time = Elements.SLOW_TIME
+	# 地灵师：命中眩晕
+	if attacker != null and is_instance_valid(attacker) and bool(attacker.get("applies_stun")):
+		stun_time = 1.2
 	queue_redraw()
 	# 被打反击
 	if not is_worker and attack_range > 0.0 and attack_target == null:
@@ -258,6 +291,13 @@ func _die(_killer: Node2D) -> void:
 	var s := InkSplat.new()
 	s.position = global_position
 	get_parent().add_child(s)
+	# 万物归尘：场上有皇陵时，阵亡者化尘待收
+	for b in get_tree().get_nodes_in_group("buildings"):
+		if b is Building and b.alive and b.complete and b.def_id == "huangling":
+			var d := Dust.new()
+			d.position = global_position
+			get_parent().add_child(d)
+			break
 	var player := PlayerState.for_team(self, team)
 	if player:
 		player.unregister_unit(pop)

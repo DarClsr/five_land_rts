@@ -13,6 +13,8 @@ var _queue: Array[String] = []  # 待训练单位 id
 var _train_progress := 0.0
 var _selected := false
 var _tower_timer := 0.0
+var _nav_id := -1              # 坊墙的导航阻挡句柄
+var _self_construct := false   # 迁制：自重建中
 
 const TOWER_RANGE := 230.0
 const TOWER_DMG := 12.0
@@ -31,7 +33,24 @@ func _ready() -> void:
 	add_to_group("buildings")
 	if complete:
 		_apply_online_effects()
+	# 坊墙：注册导航阻挡，销毁时移除（运行时重烘焙，亚毫秒级）
+	if Defs.building(def_id).get("wall", false):
+		var half: Vector2 = Defs.building(def_id)["size"] * 0.5
+		var outline := PackedVector2Array([
+			to_global(Vector2(-half.x, -half.y)), to_global(Vector2(half.x, -half.y)),
+			to_global(Vector2(half.x, half.y)), to_global(Vector2(-half.x, half.y))])
+		var registry := NavRegistry.for_tree(self)
+		if registry != null:
+			_nav_id = registry.add_obstruction(outline)
+		tree_exiting.connect(_remove_nav_obstruction)
 	queue_redraw()
+
+
+func _remove_nav_obstruction() -> void:
+	if _nav_id >= 0:
+		var r := NavRegistry.for_tree(self)
+		if r != null:
+			r.remove_obstruction(_nav_id)
 
 
 func _apply_online_effects() -> void:
@@ -49,8 +68,11 @@ func _process(delta: float) -> void:
 		if _train_progress >= unit_time:
 			_train_progress = 0.0
 			_spawn_trained(_queue.pop_front())
-	if complete and def_id == "fengsui":
+	if complete and Defs.building(def_id).get("tower", false):
 		_tower_tick(delta)
+	# 迁制：自重建（无需民夫）
+	if _self_construct and not complete:
+		add_build_progress(delta / float(Defs.building(def_id)["build_time"]) * 0.6)
 
 
 func _tower_tick(delta: float) -> void:
@@ -113,6 +135,68 @@ func is_dropoff() -> bool:
 	return Defs.building(def_id).get("dropoff", false)
 
 
+# ---- 皇陵能力：万物归尘 ----
+
+func run_ability(ability_id: String) -> String:
+	match ability_id:
+		"dust_summon":
+			return _dust_summon()
+		"dust_crystal":
+			return _dust_crystal()
+	return "未知能力"
+
+
+func _collect_dust() -> Array:
+	var dusts: Array = []
+	for d in get_tree().get_nodes_in_group("dust"):
+		if d is Dust and is_instance_valid(d) and not d.is_queued_for_deletion():
+			dusts.append(d)
+	return dusts
+
+
+func _dust_summon() -> String:
+	var dusts := _collect_dust()
+	if dusts.size() < 2:
+		return "尘不足（2 尘唤 1 俑）"
+	var player := PlayerState.for_team(self, team)
+	var spawned := 0
+	var i := 0
+	while i + 1 < dusts.size():
+		if player != null and player.pop_used + 1 > player.pop_cap:
+			break
+		(dusts[i] as Dust).queue_free()
+		(dusts[i + 1] as Dust).queue_free()
+		var puppet := Defs.spawn("taoyongzu", team)
+		puppet.position = position + Vector2(randf_range(-60, 60), Defs.building(def_id)["size"].y * 0.5 + 30.0)
+		get_parent().add_child(puppet)
+		spawned += 1
+		i += 2
+	return "归尘唤俑 ×%d" % spawned
+
+
+func _dust_crystal() -> String:
+	var dusts := _collect_dust()
+	if dusts.is_empty():
+		return "尘不足"
+	var player := PlayerState.for_team(self, team)
+	if player != null:
+		player.add_crystals(dusts.size() * 4)
+	for d in dusts:
+		(d as Dust).queue_free()
+	return "归尘炼晶 +%d" % (dusts.size() * 4)
+
+
+# ---- 迁制 ----
+
+func start_migrate(pos: Vector2) -> void:
+	"""打包迁往新址，落位后自重建（免民夫，耗时 60%）。"""
+	position = pos
+	complete = false
+	_self_construct = true
+	hp = max_hp * 0.5
+	queue_redraw()
+
+
 func _spawn_trained(unit_id: String) -> void:
 	var u := Defs.spawn(unit_id, team)
 	var udef: Dictionary = Defs.unit(unit_id)
@@ -125,10 +209,13 @@ func _spawn_trained(unit_id: String) -> void:
 
 
 func take_damage(amount: float, attacker: Node2D) -> void:
-	"""建筑为凡品，不吃五行克制。"""
+	"""建筑为凡品，不吃五行克制；投石机（siege）对建筑伤害翻倍。"""
 	if not alive:
 		return
-	hp -= amount
+	var mult := 1.0
+	if attacker != null and is_instance_valid(attacker) and bool(attacker.get("siege")):
+		mult = 2.0
+	hp -= amount * mult
 	queue_redraw()
 	if hp <= 0.0:
 		_die(attacker)
@@ -165,7 +252,13 @@ func _draw() -> void:
 		"dazhai":
 			draw_rect(Rect2(-10, -half.y + 6, 20, 30), Color(0.72, 0.18, 0.14, alpha))  # 赤旗
 			draw_line(Vector2(0, -half.y + 6), Vector2(0, -half.y - 22), Color(0.1, 0.1, 0.1, alpha), 2.0)
-		"gaizhang":
+		"wubao":
+			draw_rect(Rect2(-10, -half.y + 6, 20, 30), Color(0.25, 0.32, 0.45, alpha))  # 玄旗
+			draw_line(Vector2(0, -half.y + 6), Vector2(0, -half.y - 22), Color(0.1, 0.1, 0.1, alpha), 2.0)
+		"yashu":
+			draw_rect(Rect2(-10, -half.y + 6, 20, 30), Color(0.72, 0.58, 0.22, alpha))  # 明黄旗
+			draw_line(Vector2(0, -half.y + 6), Vector2(0, -half.y - 22), Color(0.1, 0.1, 0.1, alpha), 2.0)
+		"gaizhang", "fangshi":
 			draw_colored_polygon(
 				PackedVector2Array([Vector2(-half.x + 6, half.y - 4), Vector2(0, -half.y + 8), Vector2(half.x - 6, half.y - 4)]),
 				Color(0.45, 0.42, 0.38, alpha))
@@ -173,9 +266,26 @@ func _draw() -> void:
 			draw_rect(Rect2(-8, -half.y + 10, 16, 20), Color(0.72, 0.18, 0.14, alpha))  # 焰字旗位
 		"yingweitang":
 			draw_rect(Rect2(-8, -half.y + 10, 16, 20), Color(0.25, 0.32, 0.45, alpha))  # 玄旗
-		"fengsui":
+		"fubingying":
+			draw_rect(Rect2(-8, -half.y + 10, 16, 20), Color(0.60, 0.50, 0.30, alpha))  # 土黄旗
+		"huangling":
+			# 陵冢：封土堆 + 幽光
+			draw_colored_polygon(
+				PackedVector2Array([Vector2(-half.x + 4, half.y - 4), Vector2(0, -half.y + 10), Vector2(half.x - 4, half.y - 4)]),
+				Color(0.30, 0.27, 0.24, alpha))
+			draw_circle(Vector2(0, -half.y + 8), 4.5, Color(0.55, 0.75, 0.65, alpha))  # 龙脉幽光
+		"yaojian":
+			draw_circle(Vector2(half.x - 14, half.y - 14), 7.0, Color(0.72, 0.30, 0.14, alpha))  # 窑口火光
+		"junqijian":
+			draw_line(Vector2(-14, 6), Vector2(14, -8), Color(0.75, 0.75, 0.72, alpha), 2.5)  # 交叉剑械
+			draw_line(Vector2(14, 6), Vector2(-14, -8), Color(0.75, 0.75, 0.72, alpha), 2.5)
+		"fengsui", "gulou":
 			draw_rect(Rect2(-half + Vector2(10, 6), Vector2(size.x - 20, 8)), Color(0.6, 0.57, 0.52, alpha))
-			draw_circle(Vector2(0, -half.y + 6), 5.0, Color(0.72, 0.18, 0.14, alpha))
+			var beacon := Color(0.72, 0.18, 0.14, alpha) if def_id == "fengsui" else Color(0.60, 0.50, 0.30, alpha)
+			draw_circle(Vector2(0, -half.y + 6), 5.0, beacon)
+		"fangqiu":
+			draw_rect(Rect2(-half + Vector2(3, 3), size - Vector2(6, 6)), Color(0.32, 0.29, 0.25, alpha))  # 夯土墙芯
+			draw_rect(Rect2(-half + Vector2(3, 3), Vector2(size.x - 6, 5)), Color(0.5, 0.46, 0.4, alpha))
 	# 施工进度条
 	if not complete:
 		var w := size.x * 0.8

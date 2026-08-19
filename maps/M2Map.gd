@@ -1,5 +1,5 @@
 extends Node2D
-"""M1 对战地图：离国基地（大寨+3炎民+双灵脉矿） vs 朔国基地（占位）。经济冲刺验证场。"""
+"""M2 对战地图：大衍（玩家·土）vs 朔国（AI·水）——归墟军团全机制验证场。"""
 
 const MAP := Rect2(-1600, -900, 3200, 1800)
 
@@ -60,31 +60,36 @@ func _build_navigation() -> void:
 func _build_camera() -> RTTSCamera:
 	var cam := RTTSCamera.new()
 	cam.map_rect = MAP
-	cam.position = Vector2(-900, 300)  # 开局镜头对准离国基地
+	cam.position = Vector2(-900, 300)
 	add_child(cam)
 	return cam
 
 
 func _build_player_and_bases() -> PlayerState:
 	var player := PlayerState.new()
-	player.setup(0)
+	player.setup(0, "yan")
 	add_child(player)
 
-	# 离国大寨 + 双灵脉矿
+	# 大衍基地：衙署 + 皇陵（预置）+ 双灵脉矿
 	var hq := Building.new()
-	hq.setup("dazhai", 0, true)
+	hq.setup("yashu", 0, true)
 	hq.position = Vector2(-1050, 350)
 	add_child(hq)
 
-	for pos in [Vector2(-1300, 120), Vector2(-780, 620)]:
+	var tomb := Building.new()
+	tomb.setup("huangling", 0, true)
+	tomb.position = Vector2(-830, 500)
+	add_child(tomb)
+
+	for pos in [Vector2(-1300, 120), Vector2(-780, 650)]:
 		var node := CrystalNode.new()
 		node.position = pos
 		add_child(node)
 
-	# 朔国基地：坞堡 + 影卫堂 + 篝帐 + 灵脉矿（AI 接管运营）
+	# 朔国基地：坞堡 + 影卫堂 + 篝帐 + 灵脉矿（AI 接管）
 	var player1 := PlayerState.new()
 	player1.setup(1, "shuo")
-	player1.crystals = 300  # 补偿无微操
+	player1.crystals = 300
 	add_child(player1)
 
 	var ehq := Building.new()
@@ -106,7 +111,6 @@ func _build_player_and_bases() -> PlayerState:
 	enode.position = Vector2(1380, -180)
 	add_child(enode)
 
-	# AI 与胜负
 	var ai := EnemyAI.new()
 	ai.setup(1, self)
 	ai.hq_id = "wubao"
@@ -121,17 +125,14 @@ func _build_player_and_bases() -> PlayerState:
 
 
 func _build_units() -> void:
-	for i in 5:
-		var w := Worker.new()
-		w.team = 0
-		w.position = Vector2(-1020 + float(i) * 55.0, 500 + float(i) * 26.0)
+	for i in 4:
+		var w := Defs.spawn("yongjiang", 0)
+		w.position = Vector2(-1000 + float(i) * 52.0, 480 + float(i) * 28.0)
 		add_child(w)
-	# 朔国 AI 民夫（密探，AI 会派去采矿并补足到 5）
 	for i in 3:
 		var w1 := Defs.spawn("mijian", 1)
 		w1.position = Vector2(1150 + float(i) * 50.0, -370)
 		add_child(w1)
-	# 朔国仅留 2 游侠看家，进攻部队由 AI 自产（首波不再碾压玩家）
 	for pos in [Vector2(1060, -360), Vector2(1130, -330)]:
 		var g := Defs.spawn("youxia", 1)
 		g.position = pos
@@ -140,7 +141,7 @@ func _build_units() -> void:
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:
 	var hud := BasicHUD.new()
-	hud.tips_text = "M1：右键敌人=攻击 | 焰阵造兵 | 家里造烽燧防守(80灵晶) | 水克火·冰凌减速 | 火拆建筑返灵晶"
+	hud.tips_text = "大衍：府兵营造兵 | 皇陵归尘唤俑/炼晶 | 坊墙(20晶)封路 | 选建筑可迁移 | 土克水 | 投石机拆家"
 	add_child(hud)
 	var sel := SelectionManager.new()
 	sel.setup(cam)
