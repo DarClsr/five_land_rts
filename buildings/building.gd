@@ -157,7 +157,7 @@ func _collect_dust() -> Array:
 func _dust_summon() -> String:
 	var dusts := _collect_dust()
 	if dusts.size() < 2:
-		return "尘不足（2 尘唤 1 俑）"
+		return "军资不足（2 份补 1 兵）"
 	var player := PlayerState.for_team(self, team)
 	var spawned := 0
 	var i := 0
@@ -171,19 +171,19 @@ func _dust_summon() -> String:
 		get_parent().add_child(puppet)
 		spawned += 1
 		i += 2
-	return "归尘唤俑 ×%d" % spawned
+	return "军资补员 ×%d" % spawned
 
 
 func _dust_crystal() -> String:
 	var dusts := _collect_dust()
 	if dusts.is_empty():
-		return "尘不足"
+		return "军资不足"
 	var player := PlayerState.for_team(self, team)
 	if player != null:
 		player.add_crystals(dusts.size() * 4)
 	for d in dusts:
 		(d as Dust).queue_free()
-	return "归尘炼晶 +%d" % (dusts.size() * 4)
+	return "军资折晶 +%d" % (dusts.size() * 4)
 
 
 # ---- 迁制 ----
@@ -254,6 +254,11 @@ func _height() -> float:
 	return HEIGHTS.get(def_id, 40.0)
 
 
+func _faction_color() -> Color:
+	var player := PlayerState.for_team(self, team)
+	return Defs.faction(player.faction)["color"] if player != null else Color.WHITE
+
+
 func _draw() -> void:
 	var size: Vector2 = Defs.building(def_id)["size"]
 	var half := size * 0.5
@@ -308,13 +313,7 @@ func _draw_details(front: Rect2, roof: Rect2, half: Vector2, h: float, alpha: fl
 			draw_rect(door, Color(0.14, 0.13, 0.12, alpha))
 			draw_line(door.position + Vector2(0, 12), door.position + Vector2(28, 12), Color(0.4, 0.38, 0.35, alpha), 1.0)
 			# 顶面旗杆 + 国旗
-			var flag_col: Color = Color.WHITE
-			if def_id == "dazhai":
-				flag_col = Color(0.72, 0.18, 0.14)
-			elif def_id == "wubao":
-				flag_col = Color(0.25, 0.32, 0.45)
-			else:
-				flag_col = Color(0.72, 0.58, 0.22)
+			var flag_col := _faction_color()
 			var top := Vector2(0, roof.position.y)
 			draw_line(top, top + Vector2(0, -24), Color(0.1, 0.1, 0.1, alpha), 2.0)
 			draw_rect(Rect2(top + Vector2(0, -24), Vector2(22, 12)), Color(flag_col.r, flag_col.g, flag_col.b, alpha))
@@ -325,13 +324,7 @@ func _draw_details(front: Rect2, roof: Rect2, half: Vector2, h: float, alpha: fl
 				draw_line(Vector2(front.position.x + 4, yy), Vector2(front.end.x - 4, yy), Color(0.2, 0.19, 0.18, alpha), 1.0)
 			draw_circle(Vector2(0, roof.position.y + 4), 3.0, Color(0.85, 0.55, 0.2, alpha))  # 篝火
 		"yanzhen", "yingweitang", "fubingying":
-			var banner: Color = Color.WHITE
-			if def_id == "yanzhen":
-				banner = Color(0.72, 0.18, 0.14)
-			elif def_id == "yingweitang":
-				banner = Color(0.25, 0.32, 0.45)
-			else:
-				banner = Color(0.60, 0.50, 0.30)
+			var banner := _faction_color()
 			draw_rect(Rect2(Vector2(-8, front.position.y + 8), Vector2(16, 22)), Color(banner.r, banner.g, banner.b, alpha))
 			# 顶面兵器架
 			draw_line(roof.position + Vector2(10, roof.size.y * 0.6), roof.position + Vector2(roof.size.x - 10, roof.size.y * 0.6), Color(0.3, 0.28, 0.26, alpha), 2.0)

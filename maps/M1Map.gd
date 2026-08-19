@@ -1,5 +1,5 @@
 extends Node2D
-"""M1 对战地图：离国 vs 朔国，验证经济、争夺、AI 与胜负闭环。"""
+"""M1 对战地图：蜀汉 vs 东吴，验证经济、争夺、AI 与胜负闭环。"""
 
 const MAP := Rect2(-1600, -900, 3200, 1800)
 
@@ -150,7 +150,7 @@ func _build_fog() -> void:
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:
 	var hud := BasicHUD.new()
-	hud.tips_text = "M1：右键敌人=攻击 | 焰阵造兵 | 家里造烽燧防守(80灵晶) | 水克火·冰凌减速 | 火拆建筑返灵晶"
+	hud.tips_text = "蜀汉 vs 东吴 | 白毦营造兵 | 烽火台防守(80灵晶) | 水克火·弓手减速 | 火攻建筑返灵晶"
 	add_child(hud)
 	var sel := SelectionManager.new()
 	sel.setup(cam)

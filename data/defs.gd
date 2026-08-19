@@ -23,11 +23,11 @@ const UNITS := {
 		"cost": 50, "build_time": 8.0, "pop": 1, "worker": true,
 	},
 	"youxia": {
-		"name": "游侠", "element": "水", "hp": 90, "dmg": 10, "range": 36.0, "cd": 0.9,
+		"name": "锦帆游侠", "element": "水", "hp": 90, "dmg": 10, "range": 36.0, "cd": 0.9,
 		"speed": 185.0, "can_stealth": true, "cost": 100, "build_time": 13.0, "pop": 1,
 	},
 	"binglingshou": {
-		"name": "冰凌射手", "element": "水", "hp": 75, "dmg": 8, "range": 170.0, "cd": 1.3,
+		"name": "水军弓手", "element": "水", "hp": 75, "dmg": 8, "range": 170.0, "cd": 1.3,
 		"speed": 145.0, "ranged": true, "slow": true, "cost": 95, "build_time": 13.0, "pop": 1,
 	},
 	"chaoling": {
@@ -40,7 +40,7 @@ const UNITS := {
 		"cost": 50, "build_time": 8.0, "pop": 1, "worker": true,
 	},
 	"yanjiawei": {
-		"name": "岩甲卫", "element": "土", "hp": 220, "dmg": 8, "range": 34.0, "cd": 1.1,
+		"name": "虎卫", "element": "土", "hp": 220, "dmg": 8, "range": 34.0, "cd": 1.1,
 		"speed": 120.0, "cost": 130, "build_time": 16.0, "pop": 1,
 	},
 	"dilingshi": {
@@ -48,15 +48,15 @@ const UNITS := {
 		"speed": 140.0, "ranged": true, "stun": true, "cost": 110, "build_time": 14.0, "pop": 1,
 	},
 	"juyong": {
-		"name": "巨俑", "element": "土", "hp": 380, "dmg": 24, "range": 40.0, "cd": 1.4,
+		"name": "青州重甲", "element": "土", "hp": 380, "dmg": 24, "range": 40.0, "cd": 1.4,
 		"speed": 90.0, "cost": 260, "build_time": 24.0, "pop": 2,
 	},
 	"taoyongzu": {
-		"name": "陶俑卒", "element": "凡", "hp": 55, "dmg": 6, "range": 30.0, "cd": 1.0,
+		"name": "预备兵", "element": "凡", "hp": 55, "dmg": 6, "range": 30.0, "cd": 1.0,
 		"speed": 150.0, "cost": 0, "build_time": 2.0, "pop": 1,  # 仅由皇陵归尘唤起
 	},
 	"toushiji": {
-		"name": "投石机", "element": "凡", "hp": 150, "dmg": 30, "range": 260.0, "cd": 3.0,
+		"name": "霹雳车", "element": "凡", "hp": 150, "dmg": 30, "range": 260.0, "cd": 3.0,
 		"speed": 70.0, "ranged": true, "siege": true, "cost": 220, "build_time": 20.0, "pop": 2,
 	},
 	"yaohuojiang": {
@@ -73,61 +73,63 @@ const UNITS := {
 const BUILDINGS := {
 	# 离国
 	"dazhai": {
-		"name": "大寨", "size": Vector2(140, 100), "hp": 1200,
+		"name": "汉中府", "size": Vector2(140, 100), "hp": 1200,
 		"cost": 0, "build_time": 40.0, "pop_cap": 6, "dropoff": true, "trains": ["yanmin"],
 	},
 	"gaizhang": {
-		"name": "篝帐", "size": Vector2(72, 60), "hp": 240,
+		"name": "营帐", "faction_names": {"li": "连营", "shuo": "水榭"},
+		"size": Vector2(72, 60), "hp": 240,
 		"cost": 60, "build_time": 12.0, "pop_cap": 8,
 	},
 	"yanzhen": {
-		"name": "焰阵", "size": Vector2(96, 80), "hp": 600,
+		"name": "白毦营", "size": Vector2(96, 80), "hp": 600,
 		"cost": 120, "build_time": 18.0, "trains": ["huoshishou", "baoyanzu"],
 	},
 	"fengsui": {
-		"name": "烽燧", "size": Vector2(48, 64), "hp": 400,
+		"name": "瞭台", "faction_names": {"li": "烽火台", "shuo": "水寨瞭台"},
+		"size": Vector2(48, 64), "hp": 400,
 		"cost": 80, "build_time": 14.0, "tower": true,
 	},
 	# 朔国
 	"wubao": {
-		"name": "坞堡", "size": Vector2(140, 100), "hp": 1200,
+		"name": "都督府", "size": Vector2(140, 100), "hp": 1200,
 		"cost": 0, "build_time": 40.0, "pop_cap": 6, "dropoff": true, "trains": ["mijian"],
 	},
 	"yingweitang": {
-		"name": "影卫堂", "size": Vector2(96, 80), "hp": 600,
+		"name": "解烦营", "size": Vector2(96, 80), "hp": 600,
 		"cost": 120, "build_time": 18.0, "trains": ["youxia", "binglingshou", "chaoling"],
 	},
 	# 大衍
 	"yashu": {
-		"name": "衙署", "size": Vector2(140, 100), "hp": 1200,
+		"name": "司空府", "size": Vector2(140, 100), "hp": 1200,
 		"cost": 0, "build_time": 40.0, "pop_cap": 6, "dropoff": true, "trains": ["yongjiang"],
 	},
 	"fangshi": {
-		"name": "坊市", "size": Vector2(72, 60), "hp": 240,
+		"name": "军帐", "size": Vector2(72, 60), "hp": 240,
 		"cost": 60, "build_time": 12.0, "pop_cap": 8,
 	},
 	"fubingying": {
-		"name": "府兵营", "size": Vector2(96, 80), "hp": 600,
+		"name": "武卫营", "size": Vector2(96, 80), "hp": 600,
 		"cost": 120, "build_time": 18.0, "trains": ["yanjiawei", "dilingshi", "juyong", "toushiji"],
 	},
 	"huangling": {
-		"name": "皇陵", "size": Vector2(120, 90), "hp": 900,
+		"name": "军资府", "size": Vector2(120, 90), "hp": 900,
 		"cost": 200, "build_time": 30.0, "abilities": ["dust_summon", "dust_crystal"], "no_migrate": true,
 	},
 	"yaojian": {
-		"name": "窑监", "size": Vector2(88, 70), "hp": 500,
+		"name": "工曹坊", "size": Vector2(88, 70), "hp": 500,
 		"cost": 110, "build_time": 15.0, "trains": ["yaohuojiang"],
 	},
 	"junqijian": {
-		"name": "军器监", "size": Vector2(88, 70), "hp": 500,
+		"name": "强弩署", "size": Vector2(88, 70), "hp": 500,
 		"cost": 110, "build_time": 15.0, "trains": ["xuantiebingpo"],
 	},
 	"gulou": {
-		"name": "鼓楼", "size": Vector2(48, 64), "hp": 400,
+		"name": "望楼", "size": Vector2(48, 64), "hp": 400,
 		"cost": 80, "build_time": 14.0, "tower": true,
 	},
 	"fangqiu": {
-		"name": "坊墙", "size": Vector2(56, 56), "hp": 350,
+		"name": "阵墙", "size": Vector2(56, 56), "hp": 350,
 		"cost": 20, "build_time": 4.0, "wall": true, "no_migrate": true,
 	},
 }
@@ -135,15 +137,15 @@ const BUILDINGS := {
 # ---- 势力 ----
 const FACTIONS := {
 	"li": {
-		"name": "离国", "hq": "dazhai", "worker": "yanmin",
+		"name": "蜀汉", "color": Color(0.22, 0.50, 0.35), "hq": "dazhai", "worker": "yanmin",
 		"build": ["gaizhang", "yanzhen", "fengsui"],
 	},
 	"shuo": {
-		"name": "朔国", "hq": "wubao", "worker": "mijian",
+		"name": "东吴", "color": Color(0.25, 0.32, 0.45), "hq": "wubao", "worker": "mijian",
 		"build": ["gaizhang", "yingweitang", "fengsui"],
 	},
 	"yan": {
-		"name": "大衍", "hq": "yashu", "worker": "yongjiang",
+		"name": "曹魏", "color": Color(0.24, 0.26, 0.30), "hq": "yashu", "worker": "yongjiang",
 		"build": ["fangshi", "fubingying", "huangling", "yaojian", "junqijian", "gulou", "fangqiu"],
 	},
 }
@@ -155,6 +157,11 @@ static func unit(id: String) -> Dictionary:
 
 static func building(id: String) -> Dictionary:
 	return BUILDINGS[id]
+
+
+static func building_name(id: String, faction_id := "") -> String:
+	var def: Dictionary = BUILDINGS[id]
+	return str(def.get("faction_names", {}).get(faction_id, def["name"]))
 
 
 static func faction(id: String) -> Dictionary:

@@ -1,5 +1,5 @@
 extends Node2D
-"""M2 对战地图：大衍（玩家·土）vs 朔国（AI·水）——归墟军团全机制验证场。"""
+"""M2 对战地图：曹魏（玩家·土）vs 东吴（AI·水）——曹魏军团全机制验证场。"""
 
 const MAP := Rect2(-1600, -900, 3200, 1800)
 
@@ -152,7 +152,7 @@ func _build_fog() -> void:
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:
 	var hud := BasicHUD.new()
-	hud.tips_text = "大衍：府兵营造兵 | 皇陵归尘唤俑/炼晶 | 坊墙(20晶)封路 | 选建筑可迁移 | 土克水 | 投石机拆家"
+	hud.tips_text = "曹魏 vs 东吴 | 武卫营造兵 | 军资府补员/折晶 | 阵墙(20晶)封路 | 选建筑可迁移 | 土克水 | 霹雳车拆家"
 	add_child(hud)
 	var sel := SelectionManager.new()
 	sel.setup(cam)

@@ -51,7 +51,7 @@ func _ready() -> void:
 	seal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(seal)
 	var seal_text := Label.new()
-	seal_text.text = "五行"
+	seal_text.text = "三国"
 	seal_text.position = Vector2(834, 438)
 	seal_text.add_theme_font_size_override("font_size", 20)
 	seal_text.add_theme_color_override("font_color", Color(0.94, 0.90, 0.84))
@@ -61,7 +61,7 @@ func _ready() -> void:
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	var caption := Label.new()
-	caption.text = "《五行》M0 风格定妆照 —— 像素小人 · 水墨远山 · 飞白剑气 · 朱砂点睛"
+	caption.text = "《五行三国》M0 风格定妆照 —— 像素小人 · 水墨远山 · 飞白剑气 · 朱砂点睛"
 	caption.position = Vector2(16, 1040)
 	layer.add_child(caption)
 

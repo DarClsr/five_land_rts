@@ -60,6 +60,12 @@ func _build_ui() -> void:
 	header.add_theme_constant_override("separation", 18)
 	stack.add_child(header)
 
+	var faction_label := Label.new()
+	var faction_def: Dictionary = Defs.faction(player.faction)
+	faction_label.text = str(faction_def["name"])
+	faction_label.add_theme_color_override("font_color", faction_def["color"])
+	header.add_child(faction_label)
+
 	_selection_label = Label.new()
 	_selection_label.text = "未选中"
 	_selection_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -114,7 +120,7 @@ func _refresh_buttons() -> void:
 			break
 	if has_worker:
 		for id in Defs.faction(player.faction)["build"]:
-			_add_button(Defs.building(id)["name"] + " %d" % int(Defs.building(id)["cost"]), _start_placement.bind(id))
+			_add_button(Defs.building_name(id, player.faction) + " %d" % int(Defs.building(id)["cost"]), _start_placement.bind(id))
 	# 游侠在选 → 潜流切换
 	var has_stealth := false
 	for u in sel.selected:
@@ -131,7 +137,7 @@ func _refresh_buttons() -> void:
 			var udef: Dictionary = Defs.unit(uid)
 			_add_button("训练%s %d" % [udef["name"], int(udef["cost"])], _train_unit.bind(b, uid))
 		for ability in bdef.get("abilities", []):
-			var label := "归尘唤俑（2尘1俑）" if ability == "dust_summon" else "归尘炼晶（1尘4晶）"
+			var label := "军资补员（2份1兵）" if ability == "dust_summon" else "军资折晶（1份4晶）"
 			_add_button(label, _run_ability.bind(b, ability))
 		if player.faction == "yan" and not bdef.get("no_migrate", false) and not bdef.get("wall", false):
 			_add_button("迁移", _start_migrate.bind(b))
@@ -166,8 +172,7 @@ func _update_selection_label() -> void:
 		return
 	if sel.selected_building != null:
 		var b := sel.selected_building
-		var bdef: Dictionary = Defs.building(b.def_id)
-		_selection_label.text = "%s  HP %d/%d  ·  队列 %d" % [bdef["name"], int(b.hp), int(b.max_hp), b.queue_size()]
+		_selection_label.text = "%s  HP %d/%d  ·  队列 %d" % [Defs.building_name(b.def_id, player.faction), int(b.hp), int(b.max_hp), b.queue_size()]
 	elif sel.selected.size() == 1:
 		var u := sel.selected[0]
 		var unit_name := str(Defs.unit(u.unit_id).get("name", "单位"))
@@ -300,7 +305,7 @@ func _place(wp: Vector2) -> void:
 	for u in sel.selected:
 		if u is Worker:
 			(u as Worker).command_build(b)
-	_status.text = "%s 施工中" % def["name"]
+	_status.text = "%s 施工中" % Defs.building_name(_placing_id, player.faction)
 	_status_clear_at = Time.get_ticks_msec() + 2000
 
 
