@@ -18,6 +18,8 @@ var _self_construct := false   # 迁制：自重建中
 
 const TOWER_RANGE := 230.0
 const TOWER_DMG := 12.0
+const ENCAMPMENT_RADIUS := 220.0
+const ENCAMPMENT_DAMAGE_MULT := 0.85
 
 
 func setup(id: String, team_id: int, start_complete: bool) -> void:
@@ -135,6 +137,23 @@ func is_dropoff() -> bool:
 	return Defs.building(def_id).get("dropoff", false)
 
 
+func is_hq() -> bool:
+	return Defs.building(def_id).get("hq", false)
+
+
+func has_encampment_bonus() -> bool:
+	if not alive or not complete:
+		return false
+	var player := PlayerState.for_team(self, team)
+	if player == null or player.faction != "li":
+		return false
+	for b in get_tree().get_nodes_in_group("buildings"):
+		if b is Building and b != self and b.team == team and b.alive and b.complete and b.def_id == "gaizhang":
+			if global_position.distance_to(b.global_position) <= ENCAMPMENT_RADIUS:
+				return true
+	return false
+
+
 # ---- 皇陵能力：万物归尘 ----
 
 func run_ability(ability_id: String) -> String:
@@ -215,6 +234,8 @@ func take_damage(amount: float, attacker: Node2D) -> void:
 	var mult := 1.0
 	if attacker != null and is_instance_valid(attacker) and bool(attacker.get("siege")):
 		mult = 2.0
+	if has_encampment_bonus():
+		mult *= ENCAMPMENT_DAMAGE_MULT
 	hp -= amount * mult
 	queue_redraw()
 	if hp <= 0.0:

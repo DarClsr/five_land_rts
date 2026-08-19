@@ -31,7 +31,7 @@ func _physics_process(_delta: float) -> void:
 				workers += 1
 		var hq_queue := 0
 		for b in get_tree().get_nodes_in_group("buildings"):
-			if b is Building and b.team == 1 and b.is_dropoff():
+			if b is Building and b.team == 1 and b.is_hq():
 				hq_queue = b.queue_size()
 		_econ_ok = workers >= 4 or hq_queue > 0 or (player1 != null and player1.crystals != 300)
 		print("TEST_AI 30s: 民夫=%d 大寨队列=%d 灵晶=%s 运营=%s" % [

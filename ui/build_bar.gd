@@ -172,7 +172,8 @@ func _update_selection_label() -> void:
 		return
 	if sel.selected_building != null:
 		var b := sel.selected_building
-		_selection_label.text = "%s  HP %d/%d  ·  队列 %d" % [Defs.building_name(b.def_id, player.faction), int(b.hp), int(b.max_hp), b.queue_size()]
+		var bonus := "  ·  连营加固" if b.has_encampment_bonus() else ""
+		_selection_label.text = "%s  HP %d/%d  ·  队列 %d%s" % [Defs.building_name(b.def_id, player.faction), int(b.hp), int(b.max_hp), b.queue_size(), bonus]
 	elif sel.selected.size() == 1:
 		var u := sel.selected[0]
 		var unit_name := str(Defs.unit(u.unit_id).get("name", "单位"))
@@ -202,7 +203,8 @@ func _train_unit(hq: Building, unit_id: String) -> void:
 func _start_placement(id: String) -> void:
 	_migrating = null
 	_placing_id = id
-	_status.text = "点击地图放置，右键/ESC 取消"
+	var near_resource := float(Defs.building(id).get("resource_radius", 0.0)) > 0.0
+	_status.text = "点击灵脉附近放置，右键/ESC 取消" if near_resource else "点击地图放置，右键/ESC 取消"
 	_status_clear_at = Time.get_ticks_msec() + 4000
 
 
@@ -275,6 +277,8 @@ func _placement_valid(wp: Vector2) -> bool:
 	var id := _active_ghost_id()
 	if id == "":
 		return false
+	if not _resource_requirement_met(id, wp):
+		return false
 	var size: Vector2 = Defs.building(id)["size"]
 	var rect := Rect2(wp - size * 0.5 - Vector2.ONE * PLACE_MARGIN, size + Vector2.ONE * PLACE_MARGIN * 2.0)
 	for b in map_root.get_tree().get_nodes_in_group("buildings"):
@@ -289,6 +293,16 @@ func _placement_valid(wp: Vector2) -> bool:
 		if n is Node2D and rect.has_point(n.global_position):
 			return false
 	return true
+
+
+func _resource_requirement_met(id: String, wp: Vector2) -> bool:
+	var radius := float(Defs.building(id).get("resource_radius", 0.0))
+	if radius <= 0.0:
+		return true
+	for n in map_root.get_tree().get_nodes_in_group("gather_nodes"):
+		if n is CrystalNode and not n.is_depleted() and wp.distance_to(n.global_position) <= radius:
+			return true
+	return false
 
 
 func _place(wp: Vector2) -> void:

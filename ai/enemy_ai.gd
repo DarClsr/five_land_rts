@@ -158,9 +158,9 @@ func _guard_point(hq: Building) -> Vector2:
 
 
 func _enemy_hq_pos() -> Vector2:
-	"""敌方主基地 = 敌方带回缴点的建筑。"""
+	"""锁定真正的敌方主基地，不把军屯当作进攻终点。"""
 	for b in root.get_tree().get_nodes_in_group("buildings"):
-		if b is Building and b.alive and b.team != team_id and b.is_dropoff():
+		if b is Building and b.alive and b.team != team_id and b.is_hq():
 			return b.position
 	return Vector2.ZERO
 

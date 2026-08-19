@@ -41,8 +41,8 @@ func _check() -> void:
 
 
 func _find_hq(t: int) -> Building:
-	"""HQ = 带灵晶回缴点的建筑（大寨/坞堡/衙署）。"""
+	"""主基地与军屯等普通回缴点分开判定。"""
 	for b in root.get_tree().get_nodes_in_group("buildings"):
-		if b is Building and b.team == t and b.alive and b.is_dropoff():
+		if b is Building and b.team == t and b.alive and b.is_hq():
 			return b
 	return null

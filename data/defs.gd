@@ -74,7 +74,7 @@ const BUILDINGS := {
 	# 离国
 	"dazhai": {
 		"name": "汉中府", "size": Vector2(140, 100), "hp": 1200,
-		"cost": 0, "build_time": 40.0, "pop_cap": 6, "dropoff": true, "trains": ["yanmin"],
+		"cost": 0, "build_time": 40.0, "pop_cap": 6, "dropoff": true, "hq": true, "trains": ["yanmin"],
 	},
 	"gaizhang": {
 		"name": "营帐", "faction_names": {"li": "连营", "shuo": "水榭"},
@@ -93,7 +93,7 @@ const BUILDINGS := {
 	# 朔国
 	"wubao": {
 		"name": "都督府", "size": Vector2(140, 100), "hp": 1200,
-		"cost": 0, "build_time": 40.0, "pop_cap": 6, "dropoff": true, "trains": ["mijian"],
+		"cost": 0, "build_time": 40.0, "pop_cap": 6, "dropoff": true, "hq": true, "trains": ["mijian"],
 	},
 	"yingweitang": {
 		"name": "解烦营", "size": Vector2(96, 80), "hp": 600,
@@ -102,11 +102,12 @@ const BUILDINGS := {
 	# 大衍
 	"yashu": {
 		"name": "司空府", "size": Vector2(140, 100), "hp": 1200,
-		"cost": 0, "build_time": 40.0, "pop_cap": 6, "dropoff": true, "trains": ["yongjiang"],
+		"cost": 0, "build_time": 40.0, "pop_cap": 6, "dropoff": true, "hq": true, "trains": ["yongjiang"],
 	},
 	"fangshi": {
-		"name": "军帐", "size": Vector2(72, 60), "hp": 240,
-		"cost": 60, "build_time": 12.0, "pop_cap": 8,
+		"name": "军屯", "size": Vector2(72, 60), "hp": 240,
+		"cost": 60, "build_time": 12.0, "pop_cap": 8, "dropoff": true,
+		"resource_radius": 320.0,
 	},
 	"fubingying": {
 		"name": "武卫营", "size": Vector2(96, 80), "hp": 600,

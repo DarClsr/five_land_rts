@@ -150,7 +150,7 @@ func _build_fog() -> void:
 
 func _build_hud_and_selection(cam: RTTSCamera, player: PlayerState) -> void:
 	var hud := BasicHUD.new()
-	hud.tips_text = "蜀汉 vs 东吴 | 白毦营造兵 | 烽火台防守(80灵晶) | 水克火·弓手减速 | 火攻建筑返灵晶"
+	hud.tips_text = "蜀汉 vs 东吴 | 连营邻接加固 | 白毦营造兵 | 烽火台防守 | 水克火·弓手减速"
 	add_child(hud)
 	var sel := SelectionManager.new()
 	sel.setup(cam)

@@ -16,7 +16,7 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	var enemy_hq: Building = null
 	for b in get_tree().get_nodes_in_group("buildings"):
-		if b is Building and b.team == 1 and b.is_dropoff():
+		if b is Building and b.team == 1 and b.is_hq():
 			enemy_hq = b
 			break
 	if enemy_hq == null:
