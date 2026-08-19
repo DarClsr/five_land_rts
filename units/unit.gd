@@ -270,10 +270,10 @@ func take_damage(amount: float, attacker: Node2D) -> void:
 	elif att_elem == "火" and element != "凡" and Time.get_ticks_msec() > no_burn_until:
 		burn_time = Elements.BURN_TIME
 	# 冰凌：命中减速
-	if attacker != null and is_instance_valid(attacker) and bool(attacker.get("applies_slow")):
+	if attacker != null and is_instance_valid(attacker) and attacker.get("applies_slow") == true:
 		slow_time = Elements.SLOW_TIME
 	# 地灵师：命中眩晕
-	if attacker != null and is_instance_valid(attacker) and bool(attacker.get("applies_stun")):
+	if attacker != null and is_instance_valid(attacker) and attacker.get("applies_stun") == true:
 		stun_time = 1.2
 	queue_redraw()
 	# 被打反击

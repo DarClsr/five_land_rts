@@ -26,7 +26,12 @@ func is_depleted() -> bool:
 
 
 func _draw() -> void:
-	# 灰蓝晶簇：几枚多边形晶石 + 留白底
+	# 2.5D：地面投影 + 底座
+	draw_set_transform(Vector2(8, 10), 0.0, Vector2(1.0, 0.5))
+	draw_circle(Vector2.ZERO, 26.0, Color(0.10, 0.09, 0.09, 0.15))
+	draw_set_transform(Vector2.ZERO)
+	draw_ellipse_fill(Vector2(0, 14), 30.0, 10.0, Color(0.35, 0.32, 0.29, 0.6))
+	# 灰蓝晶簇：几枚多边形晶石
 	var shards := [
 		[Vector2(-16, 12), Vector2(-24, -10), Vector2(-8, -26), Vector2(-2, 4)],
 		[Vector2(-2, 4), Vector2(6, -22), Vector2(20, -8), Vector2(12, 14)],
@@ -41,3 +46,11 @@ func _draw() -> void:
 	# 余量越少越淡
 	if is_depleted():
 		draw_circle(Vector2.ZERO, 30.0, Color(0.85, 0.83, 0.78, 0.6))
+
+
+func draw_ellipse_fill(center: Vector2, rx: float, ry: float, color: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in 20:
+		var ang := TAU * float(i) / 20.0
+		pts.append(center + Vector2(cos(ang) * rx, sin(ang) * ry))
+	draw_colored_polygon(pts, color)

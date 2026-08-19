@@ -9,6 +9,7 @@ var _t := 0.0
 
 
 func _ready() -> void:
+	z_index = -5  # 地面贴花
 	add_to_group("dust")
 
 

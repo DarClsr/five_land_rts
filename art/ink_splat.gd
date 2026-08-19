@@ -8,6 +8,7 @@ var _blobs: Array[Vector2] = []
 
 
 func _init() -> void:
+	z_index = -5  # 地面贴花，永远在单位与建筑之下
 	# 以实例 id 派生伪随机墨点分布
 	for i in 5:
 		var ang := float((get_instance_id() * 7 + i * 61) % 360) * deg_to_rad(1.0)

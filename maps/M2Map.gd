@@ -7,6 +7,7 @@ var _obstacles: Array[PackedVector2Array] = []
 
 
 func _ready() -> void:
+	y_sort_enabled = true  # 2.5D: 按脚底 Y 排序遮挡
 	_build_paper()
 	_build_terrain()
 	_build_navigation()

@@ -237,65 +237,127 @@ func _die(attacker: Node2D) -> void:
 	queue_free()
 
 
+const HEIGHTS := {
+	"dazhai": 64.0, "wubao": 64.0, "yashu": 70.0,
+	"gaizhang": 34.0, "fangshi": 34.0,
+	"yanzhen": 46.0, "yingweitang": 46.0, "fubingying": 46.0,
+	"huangling": 20.0, "yaojian": 38.0, "junqijian": 38.0,
+	"fengsui": 84.0, "gulou": 84.0, "fangqiu": 26.0,
+}
+const SHADOW_OFFSET := Vector2(12.0, 7.0)
+const WALL_COL := Color(0.30, 0.28, 0.26)
+const ROOF_COL := Color(0.58, 0.55, 0.50)
+const EDGE_COL := Color(0.12, 0.11, 0.10)
+
+
+func _height() -> float:
+	return HEIGHTS.get(def_id, 40.0)
+
+
 func _draw() -> void:
-	var def: Dictionary = Defs.building(def_id)
-	var size: Vector2 = def["size"]
+	var size: Vector2 = Defs.building(def_id)["size"]
 	var half := size * 0.5
-	var alpha := 1.0 if complete else 0.45
-	# 施工中画半透明轮廓
-	draw_rect(Rect2(-half, size), Color(0.25, 0.23, 0.21, alpha))
-	# 竹木结构：墨墙 + 浅顶
-	draw_rect(Rect2(-half + Vector2(4, 4), size - Vector2(8, size.y * 0.35)), Color(0.16, 0.15, 0.14, alpha))
-	draw_rect(Rect2(-half + Vector2(4, 4), Vector2(size.x - 8, size.y * 0.28)), Color(0.55, 0.52, 0.47, alpha))
-	# 依建筑类型点睛
-	match def_id:
-		"dazhai":
-			draw_rect(Rect2(-10, -half.y + 6, 20, 30), Color(0.72, 0.18, 0.14, alpha))  # 赤旗
-			draw_line(Vector2(0, -half.y + 6), Vector2(0, -half.y - 22), Color(0.1, 0.1, 0.1, alpha), 2.0)
-		"wubao":
-			draw_rect(Rect2(-10, -half.y + 6, 20, 30), Color(0.25, 0.32, 0.45, alpha))  # 玄旗
-			draw_line(Vector2(0, -half.y + 6), Vector2(0, -half.y - 22), Color(0.1, 0.1, 0.1, alpha), 2.0)
-		"yashu":
-			draw_rect(Rect2(-10, -half.y + 6, 20, 30), Color(0.72, 0.58, 0.22, alpha))  # 明黄旗
-			draw_line(Vector2(0, -half.y + 6), Vector2(0, -half.y - 22), Color(0.1, 0.1, 0.1, alpha), 2.0)
-		"gaizhang", "fangshi":
-			draw_colored_polygon(
-				PackedVector2Array([Vector2(-half.x + 6, half.y - 4), Vector2(0, -half.y + 8), Vector2(half.x - 6, half.y - 4)]),
-				Color(0.45, 0.42, 0.38, alpha))
-		"yanzhen":
-			draw_rect(Rect2(-8, -half.y + 10, 16, 20), Color(0.72, 0.18, 0.14, alpha))  # 焰字旗位
-		"yingweitang":
-			draw_rect(Rect2(-8, -half.y + 10, 16, 20), Color(0.25, 0.32, 0.45, alpha))  # 玄旗
-		"fubingying":
-			draw_rect(Rect2(-8, -half.y + 10, 16, 20), Color(0.60, 0.50, 0.30, alpha))  # 土黄旗
-		"huangling":
-			# 陵冢：封土堆 + 幽光
-			draw_colored_polygon(
-				PackedVector2Array([Vector2(-half.x + 4, half.y - 4), Vector2(0, -half.y + 10), Vector2(half.x - 4, half.y - 4)]),
-				Color(0.30, 0.27, 0.24, alpha))
-			draw_circle(Vector2(0, -half.y + 8), 4.5, Color(0.55, 0.75, 0.65, alpha))  # 龙脉幽光
-		"yaojian":
-			draw_circle(Vector2(half.x - 14, half.y - 14), 7.0, Color(0.72, 0.30, 0.14, alpha))  # 窑口火光
-		"junqijian":
-			draw_line(Vector2(-14, 6), Vector2(14, -8), Color(0.75, 0.75, 0.72, alpha), 2.5)  # 交叉剑械
-			draw_line(Vector2(14, 6), Vector2(-14, -8), Color(0.75, 0.75, 0.72, alpha), 2.5)
-		"fengsui", "gulou":
-			draw_rect(Rect2(-half + Vector2(10, 6), Vector2(size.x - 20, 8)), Color(0.6, 0.57, 0.52, alpha))
-			var beacon := Color(0.72, 0.18, 0.14, alpha) if def_id == "fengsui" else Color(0.60, 0.50, 0.30, alpha)
-			draw_circle(Vector2(0, -half.y + 6), 5.0, beacon)
-		"fangqiu":
-			draw_rect(Rect2(-half + Vector2(3, 3), size - Vector2(6, 6)), Color(0.32, 0.29, 0.25, alpha))  # 夯土墙芯
-			draw_rect(Rect2(-half + Vector2(3, 3), Vector2(size.x - 6, 5)), Color(0.5, 0.46, 0.4, alpha))
-	# 施工进度条
+	var h := _height() * (1.0 if complete else 0.5)
+	var alpha := 1.0 if complete else 0.5
+	# 1) 地面投影（统一光源：左上 → 影向右下）
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(-half.x, -half.y), Vector2(half.x, -half.y),
+		Vector2(half.x, half.y) + SHADOW_OFFSET, Vector2(-half.x, half.y) + SHADOW_OFFSET,
+	]), Color(0.10, 0.09, 0.09, 0.16))
+	# 2) 地坪
+	draw_rect(Rect2(-half, size), Color(0.22, 0.20, 0.19, alpha * 0.8))
+	# 3) 前脸
+	var front := Rect2(Vector2(-half.x, half.y - h), Vector2(size.x, h))
+	draw_rect(front, Color(WALL_COL.r, WALL_COL.g, WALL_COL.b, alpha))
+	# 4) 顶面
+	var roof := Rect2(Vector2(-half.x, -half.y - h), size)
+	draw_rect(roof, Color(ROOF_COL.r, ROOF_COL.g, ROOF_COL.b, alpha))
+	draw_rect(roof, Color(EDGE_COL.r, EDGE_COL.g, EDGE_COL.b, alpha), false, 1.5)
+	draw_line(Vector2(-half.x, half.y - h), Vector2(half.x, half.y - h),
+		Color(EDGE_COL.r, EDGE_COL.g, EDGE_COL.b, alpha), 1.5)
+	# 5) 类型细节
+	_draw_details(front, roof, half, h, alpha)
+	# 6) 血条（受损时）
+	if hp < max_hp - 0.5 and complete:
+		var bw := size.x * 0.8
+		var by := -half.y - h - 12.0
+		draw_rect(Rect2(Vector2(-bw * 0.5, by), Vector2(bw, 4)), Color(0.15, 0.14, 0.13, 0.7))
+		draw_rect(Rect2(Vector2(-bw * 0.5, by), Vector2(bw * hp / max_hp, 4)), Color(0.78, 0.23, 0.17))
+	# 7) 施工进度 / 生产进度
 	if not complete:
 		var w := size.x * 0.8
-		draw_rect(Rect2(Vector2(-w * 0.5, -half.y - 12), Vector2(w, 5)), Color(0.2, 0.19, 0.18, 0.5))
-		draw_rect(Rect2(Vector2(-w * 0.5, -half.y - 12), Vector2(w * hp / max_hp, 5)), Color(0.72, 0.18, 0.14))
-	# 选中环
-	if _selected:
-		draw_arc(Vector2.ZERO, maxf(half.x, half.y) + 12.0, 0.0, TAU, 40, Color(0.78, 0.23, 0.17), 1.6)
-	# 生产队列指示
-	if complete and not _queue.is_empty():
+		draw_rect(Rect2(Vector2(-w * 0.5, -half.y - h - 18), Vector2(w, 5)), Color(0.2, 0.19, 0.18, 0.5))
+		draw_rect(Rect2(Vector2(-w * 0.5, -half.y - h - 18), Vector2(w * hp / max_hp, 5)), Color(0.72, 0.18, 0.14))
+	elif not _queue.is_empty():
 		var udef: Dictionary = Defs.unit(_queue[0])
 		var frac := _train_progress / float(udef.get("build_time", 10.0))
-		draw_rect(Rect2(Vector2(-size.x * 0.4, -half.y - 12), Vector2(size.x * 0.8 * frac, 4)), Color(0.30, 0.34, 0.42))
+		draw_rect(Rect2(Vector2(-size.x * 0.4, -half.y - h - 16), Vector2(size.x * 0.8 * frac, 4)), Color(0.30, 0.34, 0.42))
+	# 8) 选中：地面红框 + 四角
+	if _selected:
+		var sel := Rect2(-half, size).grow(8)
+		draw_rect(sel, Color(0.78, 0.23, 0.17), false, 1.6)
+		for c in [sel.position, sel.position + Vector2(sel.size.x, 0), sel.end, sel.position + Vector2(0, sel.size.y)]:
+			draw_circle(c, 3.0, Color(0.78, 0.23, 0.17))
+
+
+func _draw_details(front: Rect2, roof: Rect2, half: Vector2, h: float, alpha: float) -> void:
+	match def_id:
+		"dazhai", "wubao", "yashu":
+			# 大门 + 门钉线
+			var door := Rect2(Vector2(-14, front.end.y - 34), Vector2(28, 34))
+			draw_rect(door, Color(0.14, 0.13, 0.12, alpha))
+			draw_line(door.position + Vector2(0, 12), door.position + Vector2(28, 12), Color(0.4, 0.38, 0.35, alpha), 1.0)
+			# 顶面旗杆 + 国旗
+			var flag_col: Color = Color.WHITE
+			if def_id == "dazhai":
+				flag_col = Color(0.72, 0.18, 0.14)
+			elif def_id == "wubao":
+				flag_col = Color(0.25, 0.32, 0.45)
+			else:
+				flag_col = Color(0.72, 0.58, 0.22)
+			var top := Vector2(0, roof.position.y)
+			draw_line(top, top + Vector2(0, -24), Color(0.1, 0.1, 0.1, alpha), 2.0)
+			draw_rect(Rect2(top + Vector2(0, -24), Vector2(22, 12)), Color(flag_col.r, flag_col.g, flag_col.b, alpha))
+		"gaizhang", "fangshi":
+			# 布纹横线
+			for i in 3:
+				var yy := front.position.y + h * (0.3 + 0.2 * float(i))
+				draw_line(Vector2(front.position.x + 4, yy), Vector2(front.end.x - 4, yy), Color(0.2, 0.19, 0.18, alpha), 1.0)
+			draw_circle(Vector2(0, roof.position.y + 4), 3.0, Color(0.85, 0.55, 0.2, alpha))  # 篝火
+		"yanzhen", "yingweitang", "fubingying":
+			var banner: Color = Color.WHITE
+			if def_id == "yanzhen":
+				banner = Color(0.72, 0.18, 0.14)
+			elif def_id == "yingweitang":
+				banner = Color(0.25, 0.32, 0.45)
+			else:
+				banner = Color(0.60, 0.50, 0.30)
+			draw_rect(Rect2(Vector2(-8, front.position.y + 8), Vector2(16, 22)), Color(banner.r, banner.g, banner.b, alpha))
+			# 顶面兵器架
+			draw_line(roof.position + Vector2(10, roof.size.y * 0.6), roof.position + Vector2(roof.size.x - 10, roof.size.y * 0.6), Color(0.3, 0.28, 0.26, alpha), 2.0)
+		"huangling":
+			# 阶梯封土：上层 + 幽光
+			var upper := Rect2(Vector2(-half.x * 0.6, front.position.y - 22.0), Vector2(half.x * 1.2, 22.0))
+			draw_rect(upper, Color(0.38, 0.35, 0.32, alpha))
+			draw_rect(Rect2(upper.position - Vector2(0, 12), Vector2(upper.size.x, 12)), Color(0.5, 0.47, 0.43, alpha))
+			draw_circle(Vector2(0, upper.position.y - 14), 4.5, Color(0.55, 0.75, 0.65, alpha))
+		"yaojian":
+			# 窑口拱火
+			draw_circle(Vector2(front.position.x + 16, front.end.y - 12), 7.0, Color(0.72, 0.30, 0.14, alpha))
+			draw_rect(Rect2(roof.position + Vector2(roof.size.x - 16, 0), Vector2(10, 8)), Color(0.2, 0.19, 0.18, alpha))  # 烟囱
+		"junqijian":
+			draw_line(Vector2(front.position.x + 12, front.end.y - 10), Vector2(front.end.x - 12, front.position.y + 10), Color(0.75, 0.75, 0.72, alpha), 2.5)
+			draw_line(Vector2(front.end.x - 12, front.end.y - 10), Vector2(front.position.x + 12, front.position.y + 10), Color(0.75, 0.75, 0.72, alpha), 2.5)
+		"fengsui", "gulou":
+			# 塔身横档 + 顶灯
+			for i in 4:
+				var yy := front.position.y + h * (0.18 + 0.2 * float(i))
+				draw_line(Vector2(front.position.x + 3, yy), Vector2(front.end.x - 3, yy), Color(0.2, 0.19, 0.18, alpha), 1.5)
+			var beacon := Color(0.72, 0.18, 0.14, alpha) if def_id == "fengsui" else Color(0.60, 0.50, 0.30, alpha)
+			draw_circle(Vector2(0, roof.position.y + 2), 5.0, beacon)
+		"fangqiu":
+			# 夯土砖缝
+			for i in 2:
+				var yy := front.position.y + h * (0.35 + 0.35 * float(i))
+				draw_line(Vector2(front.position.x + 2, yy), Vector2(front.end.x - 2, yy), Color(0.22, 0.20, 0.18, alpha), 1.0)
+			draw_rect(Rect2(roof.position + Vector2(3, 3), roof.size - Vector2(6, 6)), Color(0.66, 0.62, 0.56, alpha))
