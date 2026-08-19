@@ -57,7 +57,7 @@ func _physics_process(delta: float) -> void:
 				return
 			_timer -= delta
 			if _timer <= 0.0:
-				carry = _node.take(CrystalNode.CARRY_PER_TRIP)
+				carry = _node.take(_node.trip_yield())
 				queue_redraw()
 				if carry <= 0:
 					_retarget_node_or_idle()

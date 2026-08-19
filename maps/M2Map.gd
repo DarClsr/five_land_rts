@@ -72,7 +72,7 @@ func _build_player_and_bases() -> PlayerState:
 	player.setup(0, "yan")
 	add_child(player)
 
-	# 大衍基地：衙署 + 皇陵（预置）+ 双灵脉矿
+	# 大衍基地：衙署 + 皇陵（预置）
 	var hq := Building.new()
 	hq.setup("yashu", 0, true)
 	hq.position = Vector2(-1050, 350)
@@ -83,12 +83,7 @@ func _build_player_and_bases() -> PlayerState:
 	tomb.position = Vector2(-830, 500)
 	add_child(tomb)
 
-	for pos in [Vector2(-1300, 120), Vector2(-780, 650)]:
-		var node := CrystalNode.new()
-		node.position = pos
-		add_child(node)
-
-	# 朔国基地：坞堡 + 影卫堂 + 篝帐 + 灵脉矿（AI 接管）
+	# 朔国基地：坞堡 + 影卫堂 + 篝帐（AI 接管）
 	var player1 := PlayerState.new()
 	player1.setup(1, "shuo")
 	player1.crystals = 300
@@ -109,9 +104,17 @@ func _build_player_and_bases() -> PlayerState:
 	etent.position = Vector2(1030, -540)
 	add_child(etent)
 
-	var enode := CrystalNode.new()
-	enode.position = Vector2(1380, -180)
-	add_child(enode)
+	# 双方各2处安全矿、2处侧翼扩张矿、1处中央富灵脉
+	for spec in [
+		[Vector2(-1300, 120), false], [Vector2(-1080, 700), false],
+		[Vector2(1300, -120), false], [Vector2(1080, -700), false],
+		[Vector2(-1120, -560), false], [Vector2(1120, 560), false],
+		[Vector2(180, 80), true],
+	]:
+		var node := CrystalNode.new()
+		node.setup(spec[1])
+		node.position = spec[0]
+		add_child(node)
 
 	var ai := EnemyAI.new()
 	ai.setup(1, self)

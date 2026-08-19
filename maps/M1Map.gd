@@ -1,5 +1,5 @@
 extends Node2D
-"""M1 对战地图：离国基地（大寨+3炎民+双灵脉矿） vs 朔国基地（占位）。经济冲刺验证场。"""
+"""M1 对战地图：离国 vs 朔国，验证经济、争夺、AI 与胜负闭环。"""
 
 const MAP := Rect2(-1600, -900, 3200, 1800)
 
@@ -72,18 +72,13 @@ func _build_player_and_bases() -> PlayerState:
 	player.setup(0)
 	add_child(player)
 
-	# 离国大寨 + 双灵脉矿
+	# 离国大寨
 	var hq := Building.new()
 	hq.setup("dazhai", 0, true)
 	hq.position = Vector2(-1050, 350)
 	add_child(hq)
 
-	for pos in [Vector2(-1300, 120), Vector2(-780, 620)]:
-		var node := CrystalNode.new()
-		node.position = pos
-		add_child(node)
-
-	# 朔国基地：坞堡 + 影卫堂 + 篝帐 + 灵脉矿（AI 接管运营）
+	# 朔国基地：坞堡 + 影卫堂 + 篝帐（AI 接管运营）
 	var player1 := PlayerState.new()
 	player1.setup(1, "shuo")
 	player1.crystals = 300  # 补偿无微操
@@ -104,9 +99,17 @@ func _build_player_and_bases() -> PlayerState:
 	etent.position = Vector2(1030, -540)
 	add_child(etent)
 
-	var enode := CrystalNode.new()
-	enode.position = Vector2(1380, -180)
-	add_child(enode)
+	# 双方各2处安全矿、2处侧翼扩张矿、1处中央富灵脉
+	for spec in [
+		[Vector2(-1300, 120), false], [Vector2(-1080, 700), false],
+		[Vector2(1300, -120), false], [Vector2(1080, -700), false],
+		[Vector2(-1120, -560), false], [Vector2(1120, 560), false],
+		[Vector2(180, 80), true],
+	]:
+		var node := CrystalNode.new()
+		node.setup(spec[1])
+		node.position = spec[0]
+		add_child(node)
 
 	# AI 与胜负
 	var ai := EnemyAI.new()
